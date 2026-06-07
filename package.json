@@ -1,0 +1,19 @@
+{
+  "name": "book-review-app",
+  "version": "1.0.0",
+  "description": "Book Review website for course project",
+  "main": "server.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.9.7"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}
