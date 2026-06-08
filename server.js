@@ -1,4 +1,4 @@
-const { app: electronApp, BrowserWindow } = require('electron');
+const { app: electronApp, BrowserWindow, ipcMain, dialog } = require('electron');
 const express = require('express');
 const path = require('path');
 const db = require('./db/database');
@@ -7,9 +7,53 @@ const routes = require('./routes/review.routes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Các middleware xử lý dữ liệu đầu vào
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Các middleware xử lý dữ liệu đầu vào (mở rộng giới hạn payload để nhận ảnh base64 lớn)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// ==========================================
+// ELECTRON IPC CHANNELS FOR IMAGE UPLOAD
+// ==========================================
+ipcMain.handle('select-images-dialog', async () => {
+  if (!mainWindow) return [];
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Chọn ảnh cho bài review',
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: 'Hình ảnh', extensions: ['jpg', 'jpeg', 'png', 'webp'] }
+    ]
+  });
+  if (result.canceled) return [];
+  return result.filePaths;
+});
+
+ipcMain.handle('upload-images-via-path', async (event, filePaths) => {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, 'public/src');
+  
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  const savedPaths = [];
+  const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
+
+  for (const filePath of filePaths) {
+    const ext = path.extname(filePath).toLowerCase();
+    if (!allowedExts.includes(ext)) {
+      throw new Error(`Định dạng ảnh không được hỗ trợ: ${ext}. Chỉ hỗ trợ JPG, JPEG, PNG, WEBP.`);
+    }
+
+    const filename = 'review-' + Date.now() + '-' + Math.round(Math.random() * 1e9) + ext;
+    const destPath = path.join(dir, filename);
+    
+    fs.copyFileSync(filePath, destPath);
+    savedPaths.push('src/' + filename);
+  }
+
+  return savedPaths;
+});
 
 // Phục vụ các file tĩnh (HTML, CSS, JS) trong thư mục public
 app.use(express.static(path.join(__dirname, 'public')));
@@ -17,9 +61,30 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Gắn các API Routes vào tiền tố /api
 app.use('/api', routes);
 
-// Mọi request không khớp với API sẽ được phục vụ giao diện Single Page App (index.html)
+// Phục vụ cụ thể các trang HTML tĩnh
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'discover.html'));
+});
+
+app.get('/index.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'discover.html'));
+});
+
+app.get('/discover.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'discover.html'));
+});
+
+app.get('/reviews.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reviews.html'));
+});
+
+app.get('/reviews', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reviews.html'));
+});
+
+// Mọi request không khớp với API sẽ được phục vụ giao diện mặc định (discover.html)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'discover.html'));
 });
 
 let mainWindow;

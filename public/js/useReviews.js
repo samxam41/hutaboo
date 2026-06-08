@@ -55,54 +55,82 @@ function createReviewsHook() {
       return data;
     },
 
-    // Đăng bài review mới - ĐÃ THÊM THAM SỐ bookTopic ĐỂ ĐỒNG BỘ VỚI SERVER
-    createReview: async (bookTitle, bookAuthor, rating, content, bookTopic) => {
+    // Đăng bài review mới
+    createReview: async (bookTitle, bookAuthor, rating, content, categoryIds = [], customCategories = [], imagePaths = []) => {
       const response = await fetch('/api/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
         },
-        // Gửi đầy đủ 5 trường dữ liệu lên Server để tránh lỗi 400 Bad Request
         body: JSON.stringify({ 
           bookTitle, 
           bookAuthor, 
           rating: parseInt(rating), 
           content,
-          bookTopic: bookTopic || 'Khác' // Dự phòng nếu không truyền chủ đề
+          categoryIds,
+          customCategories,
+          imagePaths
         })
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Không thể tạo bài viết.');
       
-      // Thêm bài viết mới vào đầu danh sách local state và phát thông báo
       reviews.unshift(data.review);
       notify();
       return data.review;
     },
 
     // Chỉnh sửa bài review của mình
-    updateReview: async (id, rating, content) => {
+    updateReview: async (id, rating, content, categoryIds = [], customCategories = [], imagePaths = []) => {
       const response = await fetch(`/api/reviews/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
         },
-        body: JSON.stringify({ rating: parseInt(rating), content })
+        body: JSON.stringify({ 
+          rating: parseInt(rating), 
+          content,
+          categoryIds,
+          customCategories,
+          imagePaths
+        })
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Không thể cập nhật bài viết.');
 
-      // Cập nhật thông tin trong local state
       const index = reviews.findIndex(r => r.id === parseInt(id));
       if (index !== -1) {
         reviews[index] = data.review;
       }
       notify();
       return data.review;
+    },
+
+    // Tải danh sách thể loại từ DB
+    fetchCategories: async () => {
+      const response = await fetch('/api/categories');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Không thể tải danh sách thể loại.');
+      return data;
+    },
+
+    // Upload danh sách ảnh base64 qua API
+    uploadImages: async (imagesBase64) => {
+      const response = await fetch('/api/reviews/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({ images: imagesBase64 })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Không thể upload ảnh.');
+      return data.imagePaths;
     },
 
     // Xóa bài review của mình

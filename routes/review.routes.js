@@ -5,7 +5,8 @@ const {
   AuthController,
   BookController,
   ReviewController,
-  CommentController
+  CommentController,
+  CategoryController
 } = require('../controllers/review.controller');
 
 // ==========================================
@@ -14,6 +15,11 @@ const {
 router.post('/auth/register', AuthController.register);
 router.post('/auth/login', AuthController.login);
 router.get('/auth/me', authenticateToken, AuthController.getMe);
+
+// ==========================================
+// 1.5. ĐƯỜNG DẪN THỂ LOẠI (CATEGORIES API)
+// ==========================================
+router.get('/categories', CategoryController.getAll);
 
 // ==========================================
 // 2. ĐƯỜNG DẪN SÁCH (BOOKS API) - Thiết kế mở rộng tích hợp
@@ -31,6 +37,7 @@ router.get('/reviews/book/:bookId', ReviewController.getByBookId);
 router.post('/reviews', authenticateToken, ReviewController.create);
 router.put('/reviews/:id', authenticateToken, ReviewController.update);
 router.delete('/reviews/:id', authenticateToken, ReviewController.delete);
+router.post('/reviews/upload', authenticateToken, ReviewController.uploadImages);
 
 // ==========================================
 // 4. ĐƯỜNG DẪN BÌNH LUẬN (COMMENTS API)

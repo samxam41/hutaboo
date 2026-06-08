@@ -38,7 +38,7 @@ class BookRepository {
   async getAll() {
     const pool = db.getPool();
     const [rows] = await pool.query('SELECT * FROM books ORDER BY title ASC');
-    return rows.map(r => new Book(r.id, r.title, r.author, r.topic));
+    return rows.map(r => new Book(r.id, r.title, r.author, r.tags, r.average_rating, r.review_count, r.description, r.image));
   }
 
   async getById(id) {
@@ -46,7 +46,7 @@ class BookRepository {
     const [rows] = await pool.query('SELECT * FROM books WHERE id = ?', [id]);
     if (rows.length === 0) return null;
     const r = rows[0];
-    return new Book(r.id, r.title, r.author, r.topic);
+    return new Book(r.id, r.title, r.author, r.tags, r.average_rating, r.review_count, r.description, r.image);
   }
 
   async getOrCreate(title, author) {
@@ -63,16 +63,45 @@ class BookRepository {
 
     // Nếu chưa tồn tại, tự động tạo mới sách
     const [result] = await pool.query(
-      'INSERT INTO books (title, author, topic) VALUES (?, ?, ?)',
-      [title.trim(), author.trim(), 'Khác']
+      'INSERT INTO books (title, author, tags, average_rating, review_count, description, image) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [title.trim(), author.trim(), 'Khác', 0.00, 0, 'Chưa có mô tả cho cuốn sách này.', './images/default_cover.svg']
     );
     return result.insertId;
   }
 
   async getByTopic(topic) {
     const pool = db.getPool();
-    const [rows] = await pool.query('SELECT * FROM books WHERE topic = ? ORDER BY title ASC', [topic]);
-    return rows.map(r => new Book(r.id, r.title, r.author, r.topic));
+    const cleanTopic = `%${topic.trim()}%`;
+    const [rows] = await pool.query(
+      'SELECT * FROM books WHERE tags LIKE ? ORDER BY title ASC',
+      [cleanTopic]
+    );
+    return rows.map(r => new Book(r.id, r.title, r.author, r.tags, r.average_rating, r.review_count, r.description, r.image));
+  }
+
+  async searchBooks(keyword) {
+    const pool = db.getPool();
+    const cleanKey = `%${keyword.trim()}%`;
+    const [rows] = await pool.query(
+      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR tags LIKE ? ORDER BY title ASC',
+      [cleanKey, cleanKey, cleanKey]
+    );
+    return rows.map(r => new Book(r.id, r.title, r.author, r.tags, r.average_rating, r.review_count, r.description, r.image));
+  }
+
+  async updateRating(bookId) {
+    const pool = db.getPool();
+    const [rows] = await pool.query(
+      'SELECT COUNT(*) as reviewCount, AVG(rating) as averageRating FROM reviews WHERE book_id = ?',
+      [bookId]
+    );
+    const reviewCount = rows[0].reviewCount || 0;
+    const averageRating = parseFloat(rows[0].averageRating || 0).toFixed(2);
+    
+    await pool.query(
+      'UPDATE books SET average_rating = ?, review_count = ? WHERE id = ?',
+      [averageRating, reviewCount, bookId]
+    );
   }
 }
 
@@ -83,23 +112,66 @@ class ReviewRepository {
   async getAll() {
     const pool = db.getPool();
     const query = `
-      SELECT r.*, u.username, b.title as bookTitle, b.author as bookAuthor
+      SELECT r.*, u.username, b.title as bookTitle, b.author as bookAuthor, b.tags as bookTopic
       FROM reviews r
       JOIN users u ON r.user_id = u.id
       JOIN books b ON r.book_id = b.id
       ORDER BY r.created_at DESC
     `;
     const [rows] = await pool.query(query);
-    return rows.map(r => new Review(
-      r.id, r.user_id, r.book_id, r.rating, r.content, r.created_at,
-      r.username, r.bookTitle, r.bookAuthor
-    ));
+    if (rows.length === 0) return [];
+
+    const reviews = rows.map(r => {
+      const review = new Review(
+        r.id, r.user_id, r.book_id, r.rating, r.content, r.created_at,
+        r.username, r.bookTitle, r.bookAuthor, r.bookTopic
+      );
+      review.categories = [];
+      review.categoryIds = [];
+      review.images = [];
+      return review;
+    });
+
+    const reviewIds = reviews.map(r => r.id);
+    const [catRows] = await pool.query(`
+      SELECT rc.review_id, c.id as category_id, c.name as category_name
+      FROM review_categories rc
+      JOIN categories c ON rc.category_id = c.id
+      WHERE rc.review_id IN (?)
+    `, [reviewIds]);
+
+    const [imgRows] = await pool.query(`
+      SELECT review_id, image_path
+      FROM review_images
+      WHERE review_id IN (?)
+    `, [reviewIds]);
+
+    for (const row of catRows) {
+      const review = reviews.find(r => r.id === row.review_id);
+      if (review) {
+        review.categories.push(row.category_name);
+        review.categoryIds.push(row.category_id);
+      }
+    }
+
+    for (const row of imgRows) {
+      const review = reviews.find(r => r.id === row.review_id);
+      if (review) {
+        review.images.push(row.image_path);
+      }
+    }
+
+    console.log(`[ReviewRepository - getAll] Đã nạp thể loại cho ${reviews.length} reviews. Chi tiết ánh xạ:`, 
+      reviews.map(r => ({ id: r.id, title: r.bookTitle, categories: r.categories }))
+    );
+
+    return reviews;
   }
 
   async getById(id) {
     const pool = db.getPool();
     const query = `
-      SELECT r.*, u.username, b.title as bookTitle, b.author as bookAuthor
+      SELECT r.*, u.username, b.title as bookTitle, b.author as bookAuthor, b.tags as bookTopic
       FROM reviews r
       JOIN users u ON r.user_id = u.id
       JOIN books b ON r.book_id = b.id
@@ -108,16 +180,48 @@ class ReviewRepository {
     const [rows] = await pool.query(query, [id]);
     if (rows.length === 0) return null;
     const r = rows[0];
-    return new Review(
+    const review = new Review(
       r.id, r.user_id, r.book_id, r.rating, r.content, r.created_at,
-      r.username, r.bookTitle, r.bookAuthor
+      r.username, r.bookTitle, r.bookAuthor, r.bookTopic
     );
+    review.categories = [];
+    review.categoryIds = [];
+    review.images = [];
+
+    const [catRows] = await pool.query(`
+      SELECT c.id, c.name
+      FROM review_categories rc
+      JOIN categories c ON rc.category_id = c.id
+      WHERE rc.review_id = ?
+    `, [id]);
+    for (const row of catRows) {
+      review.categories.push(row.name);
+      review.categoryIds.push(row.id);
+    }
+
+    const [imgRows] = await pool.query(`
+      SELECT image_path
+      FROM review_images
+      WHERE review_id = ?
+    `, [id]);
+    for (const row of imgRows) {
+      review.images.push(row.image_path);
+    }
+
+    console.log(`[ReviewRepository - getById] Chi tiết review ID ${id} được truy vấn:`, {
+      id: review.id,
+      title: review.bookTitle,
+      categories: review.categories,
+      categoryIds: review.categoryIds
+    });
+
+    return review;
   }
 
   async getByBookId(bookId) {
     const pool = db.getPool();
     const query = `
-      SELECT r.*, u.username, b.title as bookTitle, b.author as bookAuthor
+      SELECT r.*, u.username, b.title as bookTitle, b.author as bookAuthor, b.tags as bookTopic
       FROM reviews r
       JOIN users u ON r.user_id = u.id
       JOIN books b ON r.book_id = b.id
@@ -125,34 +229,207 @@ class ReviewRepository {
       ORDER BY r.created_at DESC
     `;
     const [rows] = await pool.query(query, [bookId]);
-    return rows.map(r => new Review(
-      r.id, r.user_id, r.book_id, r.rating, r.content, r.created_at,
-      r.username, r.bookTitle, r.bookAuthor
-    ));
+    if (rows.length === 0) return [];
+
+    const reviews = rows.map(r => {
+      const review = new Review(
+        r.id, r.user_id, r.book_id, r.rating, r.content, r.created_at,
+        r.username, r.bookTitle, r.bookAuthor, r.bookTopic
+      );
+      review.categories = [];
+      review.categoryIds = [];
+      review.images = [];
+      return review;
+    });
+
+    const reviewIds = reviews.map(r => r.id);
+    const [catRows] = await pool.query(`
+      SELECT rc.review_id, c.id as category_id, c.name as category_name
+      FROM review_categories rc
+      JOIN categories c ON rc.category_id = c.id
+      WHERE rc.review_id IN (?)
+    `, [reviewIds]);
+
+    const [imgRows] = await pool.query(`
+      SELECT review_id, image_path
+      FROM review_images
+      WHERE review_id IN (?)
+    `, [reviewIds]);
+
+    for (const row of catRows) {
+      const review = reviews.find(r => r.id === row.review_id);
+      if (review) {
+        review.categories.push(row.category_name);
+        review.categoryIds.push(row.category_id);
+      }
+    }
+
+    for (const row of imgRows) {
+      const review = reviews.find(r => r.id === row.review_id);
+      if (review) {
+        review.images.push(row.image_path);
+      }
+    }
+
+    console.log(`[ReviewRepository - getByBookId] Đã nạp thể loại cho ${reviews.length} reviews của book ID ${bookId}. Chi tiết ánh xạ:`, 
+      reviews.map(r => ({ id: r.id, title: r.bookTitle, categories: r.categories }))
+    );
+
+    return reviews;
   }
 
-  async create(userId, bookId, rating, content) {
+  async create(userId, bookId, rating, content, categoryIds = [], customCategories = [], imagePaths = []) {
     const pool = db.getPool();
+    console.log('[ReviewRepository - Create] Đang bắt đầu lưu review:', { userId, bookId, rating, content, categoryIds, customCategories, imagePaths });
+    
     const [result] = await pool.query(
       'INSERT INTO reviews (user_id, book_id, rating, content) VALUES (?, ?, ?, ?)',
       [userId, bookId, rating, content]
     );
-    return result.insertId;
+    const reviewId = result.insertId;
+    console.log('[ReviewRepository - Create] Đã insert bảng reviews. ID mới:', reviewId);
+
+    if (categoryIds && categoryIds.length > 0) {
+      console.log('[ReviewRepository - Create] Lưu thể loại mặc định liên kết:', categoryIds);
+      const reviewCategories = categoryIds.map(catId => [reviewId, catId]);
+      await pool.query(
+        'INSERT INTO review_categories (review_id, category_id) VALUES ?',
+        [reviewCategories]
+      );
+    }
+
+    if (customCategories && customCategories.length > 0) {
+      console.log('[ReviewRepository - Create] Lưu các thể loại tùy chỉnh:', customCategories);
+      for (const name of customCategories) {
+        const cleanName = name.trim();
+        if (cleanName.length === 0) continue;
+        
+        let [catRows] = await pool.query('SELECT id FROM categories WHERE name = ?', [cleanName]);
+        let catId;
+        if (catRows.length === 0) {
+          const [insertRes] = await pool.query('INSERT INTO categories (name, is_default) VALUES (?, ?)', [cleanName, false]);
+          catId = insertRes.insertId;
+          console.log(`[ReviewRepository - Create] Đã tạo mới thể loại tùy chỉnh "${cleanName}" với ID: ${catId}`);
+        } else {
+          catId = catRows[0].id;
+          console.log(`[ReviewRepository - Create] Thể loại tùy chỉnh "${cleanName}" đã tồn tại với ID: ${catId}`);
+        }
+        await pool.query('INSERT IGNORE INTO review_categories (review_id, category_id) VALUES (?, ?)', [reviewId, catId]);
+        console.log(`[ReviewRepository - Create] Đã liên kết review ${reviewId} với thể loại ID ${catId}`);
+      }
+    }
+
+    if (imagePaths && imagePaths.length > 0) {
+      const reviewImages = imagePaths.map(p => [reviewId, p]);
+      await pool.query(
+        'INSERT INTO review_images (review_id, image_path) VALUES ?',
+        [reviewImages]
+      );
+    }
+
+    return reviewId;
   }
 
-  async update(id, rating, content) {
+  async update(id, rating, content, categoryIds = [], customCategories = [], imagePaths = []) {
     const pool = db.getPool();
+    const fs = require('fs');
+    const path = require('path');
+    console.log('[ReviewRepository - Update] Đang bắt đầu cập nhật review ID:', id, { rating, content, categoryIds, customCategories, imagePaths });
+
     await pool.query(
       'UPDATE reviews SET rating = ?, content = ? WHERE id = ?',
       [rating, content, id]
     );
+
+    console.log('[ReviewRepository - Update] Đang xóa liên kết thể loại cũ của review:', id);
+    await pool.query('DELETE FROM review_categories WHERE review_id = ?', [id]);
+
+    if (categoryIds && categoryIds.length > 0) {
+      console.log('[ReviewRepository - Update] Lưu lại thể loại mặc định liên kết:', categoryIds);
+      const reviewCategories = categoryIds.map(catId => [id, catId]);
+      await pool.query(
+        'INSERT INTO review_categories (review_id, category_id) VALUES ?',
+        [reviewCategories]
+      );
+    }
+
+    if (customCategories && customCategories.length > 0) {
+      console.log('[ReviewRepository - Update] Lưu lại các thể loại tùy chỉnh:', customCategories);
+      for (const name of customCategories) {
+        const cleanName = name.trim();
+        if (cleanName.length === 0) continue;
+        
+        let [catRows] = await pool.query('SELECT id FROM categories WHERE name = ?', [cleanName]);
+        let catId;
+        if (catRows.length === 0) {
+          const [insertRes] = await pool.query('INSERT INTO categories (name, is_default) VALUES (?, ?)', [cleanName, false]);
+          catId = insertRes.insertId;
+          console.log(`[ReviewRepository - Update] Đã tạo mới thể loại tùy chỉnh "${cleanName}" với ID: ${catId}`);
+        } else {
+          catId = catRows[0].id;
+          console.log(`[ReviewRepository - Update] Thể loại tùy chỉnh "${cleanName}" đã tồn tại với ID: ${catId}`);
+        }
+        await pool.query('INSERT IGNORE INTO review_categories (review_id, category_id) VALUES (?, ?)', [id, catId]);
+        console.log(`[ReviewRepository - Update] Đã liên kết review ${id} với thể loại ID ${catId}`);
+      }
+    }
+
+    const [oldImgRows] = await pool.query('SELECT image_path FROM review_images WHERE review_id = ?', [id]);
+    const oldPaths = oldImgRows.map(r => r.image_path);
+
+    const pathsToDelete = oldPaths.filter(p => !imagePaths.includes(p));
+    const pathsToAdd = imagePaths.filter(p => !oldPaths.includes(p));
+
+    for (const imgPath of pathsToDelete) {
+      const fullPath = path.join(__dirname, '../public', imgPath);
+      if (fs.existsSync(fullPath)) {
+        try {
+          fs.unlinkSync(fullPath);
+        } catch (err) {
+          console.error('[Repository] Lỗi khi xóa file ảnh vật lý:', err.message);
+        }
+      }
+      await pool.query('DELETE FROM review_images WHERE review_id = ? AND image_path = ?', [id, imgPath]);
+    }
+
+    if (pathsToAdd.length > 0) {
+      const reviewImages = pathsToAdd.map(p => [id, p]);
+      await pool.query(
+        'INSERT INTO review_images (review_id, image_path) VALUES ?',
+        [reviewImages]
+      );
+    }
+
     return true;
   }
 
   async delete(id) {
     const pool = db.getPool();
+    const fs = require('fs');
+    const path = require('path');
+
+    const [imgRows] = await pool.query('SELECT image_path FROM review_images WHERE review_id = ?', [id]);
+    for (const r of imgRows) {
+      const fullPath = path.join(__dirname, '../public', r.image_path);
+      if (fs.existsSync(fullPath)) {
+        try {
+          fs.unlinkSync(fullPath);
+        } catch (err) {
+          console.error('[Repository] Lỗi khi xóa file ảnh vật lý lúc xóa review:', err.message);
+        }
+      }
+    }
+
     await pool.query('DELETE FROM reviews WHERE id = ?', [id]);
     return true;
+  }
+}
+
+class CategoryRepository {
+  async getAll() {
+    const pool = db.getPool();
+    const [rows] = await pool.query('SELECT * FROM categories ORDER BY is_default DESC, name ASC');
+    return rows;
   }
 }
 
@@ -204,5 +481,6 @@ module.exports = {
   UserRepository: new UserRepository(),
   BookRepository: new BookRepository(),
   ReviewRepository: new ReviewRepository(),
-  CommentRepository: new CommentRepository()
+  CommentRepository: new CommentRepository(),
+  CategoryRepository: new CategoryRepository()
 };

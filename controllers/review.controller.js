@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { UserRepository, BookRepository, ReviewRepository, CommentRepository } = require('../repositories/review.repository');
+const { UserRepository, BookRepository, ReviewRepository, CommentRepository, CategoryRepository } = require('../repositories/review.repository');
 const { Review, Comment } = require('../models/review.model');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key-for-book-reviews';
@@ -102,7 +102,13 @@ const AuthController = {
 const BookController = {
   async getAll(req, res) {
     try {
-      const books = await BookRepository.getAll();
+      const search = req.query.search;
+      let books;
+      if (search && search.trim() !== '') {
+        books = await BookRepository.searchBooks(search);
+      } else {
+        books = await BookRepository.getAll();
+      }
       return res.json(books);
     } catch (error) {
       return res.status(500).json({ message: 'Lỗi máy chủ: ' + error.message });
@@ -167,7 +173,9 @@ const ReviewController = {
 
   async create(req, res) {
     try {
-      const { bookTitle, bookAuthor, rating, content } = req.body;
+      const { bookTitle, bookAuthor, rating, content, categoryIds, customCategories, imagePaths } = req.body;
+      console.log('[Backend Controller - Create Review] Payload nhận được:', { bookTitle, bookAuthor, rating, content, categoryIds, customCategories, imagePaths });
+      
       const errorMsg = Review.validate({ bookTitle, bookAuthor, rating, content });
       if (errorMsg) {
         return res.status(400).json({ message: errorMsg });
@@ -176,19 +184,34 @@ const ReviewController = {
       // Tự động tìm kiếm sách đã có hoặc tạo mới
       const bookId = await BookRepository.getOrCreate(bookTitle, bookAuthor);
 
-      const reviewId = await ReviewRepository.create(req.user.id, bookId, rating, content);
+      const reviewId = await ReviewRepository.create(
+        req.user.id, 
+        bookId, 
+        rating, 
+        content,
+        categoryIds || [],
+        customCategories || [],
+        imagePaths || []
+      );
+      
+      // Tự động tính toán lại điểm trung bình của sách
+      await BookRepository.updateRating(bookId);
+      
       const newReview = await ReviewRepository.getById(reviewId);
+      console.log('[Backend Controller - Create Review] Đã lưu thành công review ID:', reviewId);
 
       return res.status(201).json({ message: 'Đăng bài review thành công.', review: newReview });
     } catch (error) {
+      console.error('[Backend Controller - Create Review] Lỗi:', error);
       return res.status(500).json({ message: 'Lỗi máy chủ: ' + error.message });
     }
   },
 
   async update(req, res) {
     try {
-      const { rating, content } = req.body;
+      const { rating, content, categoryIds, customCategories, imagePaths } = req.body;
       const reviewId = req.params.id;
+      console.log('[Backend Controller - Update Review] Payload nhận được:', { reviewId, rating, content, categoryIds, customCategories, imagePaths });
 
       const review = await ReviewRepository.getById(reviewId);
       if (!review) {
@@ -205,11 +228,24 @@ const ReviewController = {
         return res.status(400).json({ message: errorMsg });
       }
 
-      await ReviewRepository.update(reviewId, rating, content);
+      await ReviewRepository.update(
+        reviewId, 
+        rating, 
+        content,
+        categoryIds || [],
+        customCategories || [],
+        imagePaths || []
+      );
+      
+      // Tự động tính toán lại điểm trung bình của sách
+      await BookRepository.updateRating(review.bookId);
+      
       const updatedReview = await ReviewRepository.getById(reviewId);
+      console.log('[Backend Controller - Update Review] Đã cập nhật thành công review ID:', reviewId);
 
       return res.json({ message: 'Cập nhật review thành công.', review: updatedReview });
     } catch (error) {
+      console.error('[Backend Controller - Update Review] Lỗi:', error);
       return res.status(500).json({ message: 'Lỗi máy chủ: ' + error.message });
     }
   },
@@ -228,9 +264,59 @@ const ReviewController = {
       }
 
       await ReviewRepository.delete(reviewId);
+      
+      // Tự động tính toán lại điểm trung bình của sách
+      await BookRepository.updateRating(review.bookId);
+      
       return res.json({ message: 'Xóa bài review thành công.' });
     } catch (error) {
       return res.status(500).json({ message: 'Lỗi máy chủ: ' + error.message });
+    }
+  },
+
+  async uploadImages(req, res) {
+    try {
+      const { images } = req.body;
+      if (!images || !Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ message: 'Không có tệp hình ảnh nào được gửi lên.' });
+      }
+
+      const fs = require('fs');
+      const path = require('path');
+      const dir = path.join(__dirname, '../public/src');
+      
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      const savedPaths = [];
+
+      for (const base64Str of images) {
+        const matches = base64Str.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          return res.status(400).json({ message: 'Định dạng dữ liệu ảnh Base64 không hợp lệ.' });
+        }
+
+        const ext = matches[1].toLowerCase();
+        const data = matches[2];
+
+        const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+        if (!allowedExts.includes(ext)) {
+          return res.status(400).json({ message: 'Định dạng ảnh không được hỗ trợ. Chỉ hỗ trợ JPG, JPEG, PNG, WEBP.' });
+        }
+
+        const buffer = Buffer.from(data, 'base64');
+        const filename = 'review-' + Date.now() + '-' + Math.round(Math.random() * 1e9) + '.' + ext;
+        const relativePath = 'src/' + filename;
+        const fullPath = path.join(dir, filename);
+
+        fs.writeFileSync(fullPath, buffer);
+        savedPaths.push(relativePath);
+      }
+
+      return res.json({ message: 'Upload ảnh thành công.', imagePaths: savedPaths });
+    } catch (error) {
+      return res.status(500).json({ message: 'Lỗi máy chủ khi upload ảnh: ' + error.message });
     }
   }
 };
@@ -294,10 +380,22 @@ const CommentController = {
   }
 };
 
+const CategoryController = {
+  async getAll(req, res) {
+    try {
+      const categories = await CategoryRepository.getAll();
+      return res.json(categories);
+    } catch (error) {
+      return res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách thể loại: ' + error.message });
+    }
+  }
+};
+
 module.exports = {
   authenticateToken,
   AuthController,
   BookController,
   ReviewController,
-  CommentController
+  CommentController,
+  CategoryController
 };

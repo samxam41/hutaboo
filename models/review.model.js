@@ -13,11 +13,15 @@ class User {
  * Lớp đại diện cho sách (Book Model)
  */
 class Book {
-  constructor(id, title, author, topic) {
+  constructor(id, title, author, tags = null, averageRating = 0, reviewCount = 0, description = null, image = null) {
     this.id = id;
     this.title = title;
     this.author = author;
-    this.topic = topic;
+    this.tags = tags;
+    this.averageRating = averageRating;
+    this.reviewCount = reviewCount;
+    this.description = description;
+    this.image = image;
   }
 }
 
@@ -25,7 +29,7 @@ class Book {
  * Lớp đại diện cho bài đánh giá sách (Review Model)
  */
 class Review {
-  constructor(id, userId, bookId, rating, content, createdAt, username = null, bookTitle = null, bookAuthor = null) {
+  constructor(id, userId, bookId, rating, content, createdAt, username = null, bookTitle = null, bookAuthor = null, bookTopic = null) {
     this.id = id;
     this.userId = userId;
     this.bookId = bookId;
@@ -37,6 +41,7 @@ class Review {
     this.username = username;
     this.bookTitle = bookTitle;
     this.bookAuthor = bookAuthor;
+    this.bookTopic = bookTopic;
   }
 
   /**

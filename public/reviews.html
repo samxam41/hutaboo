@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HuTaBoo - Đánh Giá Sách</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Quản lý và xem các đánh giá sách hoàn chỉnh với Electron, Express và MySQL.">
+  
+  <!-- Font và Icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Hộp Chứa Toast Thông Báo Nhanh -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- SIDEBAR MENU (SLIDE-OUT) -->
+  <div class="sidebar-overlay" id="sidebar-menu">
+    <div class="sidebar-content">
+      <button class="close-sidebar-btn" id="close-sidebar-btn">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      
+      <h2 class="sidebar-title">HuTaBoo</h2>
+      <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Khám phá tri thức Việt</p>
+      
+      <div class="sidebar-divider"></div>
+      
+      <div class="sidebar-menu-item category-toggle" id="sidebar-category-toggle">
+        <span><i class="fa-solid fa-masks-theater"></i> Thể loại sách</span>
+        <i class="fa-solid fa-chevron-right" id="sidebar-chevron"></i>
+      </div>
+      
+      <div class="sidebar-categories" id="sidebar-categories-container">
+        <!-- Được chèn động qua JS -->
+      </div>
+      
+      <div class="sidebar-menu-item" id="sidebar-action-write">
+        <span><i class="fa-solid fa-pen-nib"></i> Đăng bài viết mới</span>
+      </div>
+      
+      <div class="sidebar-menu-item" onclick="showToast('HuTaBoo v2.0 - Electron Desktop App')">
+        <span><i class="fa-solid fa-circle-info"></i> Phiên bản</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVIGATION HEADER -->
+  <header>
+    <div class="nav-container">
+      <div class="nav-left">
+        <button class="menu-trigger-btn" id="open-sidebar-btn">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <a href="discover.html" class="logo" id="logo-btn">
+          <i class="fa-solid fa-book-open"></i> HuTaBoo
+        </a>
+      </div>
+
+      <!-- Tabs chuyển đổi giữa Khám phá Sách và Feed Review -->
+      <div class="nav-tabs">
+        <a href="discover.html" class="nav-tab-btn" id="tab-btn-explorer">
+          <i class="fa-solid fa-compass"></i> Khám phá sách
+        </a>
+        <a href="reviews.html" class="nav-tab-btn active" id="tab-btn-reviews">
+          <i class="fa-regular fa-star"></i> Đánh giá mới nhất
+        </a>
+      </div>
+      
+      <!-- Khối điều khiển Xác thực -->
+      <div class="auth-buttons" id="auth-header-container">
+        <button class="btn btn-secondary" id="open-auth-btn">
+          <i class="fa-solid fa-user-lock"></i> Đăng nhập
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main>
+    <!-- THANH CÔNG CỤ & BỘ LỌC CHỦ ĐỀ -->
+    <div class="toolbar">
+      <div class="topics-filter" id="topics-filter-container">
+        <!-- Sẽ render động các danh mục thể loại qua JS -->
+      </div>
+      
+      <button class="btn btn-primary" id="btn-write-review">
+        <i class="fa-solid fa-pen-fancy"></i> Viết Review
+      </button>
+    </div>
+
+    <!-- TAB 2: DÒNG THỜI GIAN REVIEW -->
+    <div class="tab-view active" id="view-reviews">
+      <div class="reviews-grid" id="reviews-list-container">
+        <!-- Render bài reviews qua JS -->
+      </div>
+    </div>
+  </main>
+
+  <!-- ==========================================
+       1. MODAL ĐĂNG NHẬP / ĐĂNG KÝ (AUTH)
+       ========================================== -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-content">
+      <div class="auth-tabs">
+        <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Đăng nhập</div>
+        <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Đăng ký tài khoản</div>
+      </div>
+      
+      <div class="modal-body">
+        <div class="form-alert danger" id="auth-error-alert">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="auth-error-msg"></span>
+        </div>
+
+        <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+          <div class="form-group">
+            <label class="form-label" for="auth-username">Tên đăng nhập</label>
+            <input type="text" id="auth-username" class="form-control" placeholder="Nhập tên đăng nhập..." required autocomplete="username">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="auth-password">Mật khẩu</label>
+            <input type="password" id="auth-password" class="form-control" placeholder="Nhập mật khẩu..." required autocomplete="current-password">
+          </div>
+          
+          <button type="submit" class="btn btn-primary form-submit-btn" id="auth-submit-btn">
+            Đăng nhập
+          </button>
+          
+          <button type="button" class="btn btn-text form-submit-btn" id="close-auth-modal-btn">
+            Hủy bỏ
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       2. MODAL VIẾT / CHỈNH SỬA REVIEW (FORM)
+       ========================================== -->
+  <div class="modal-overlay" id="review-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="review-modal-title">Viết bài Review Sách</h3>
+        <button class="close-modal-btn" id="close-review-modal-x">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-alert danger" id="review-error-alert">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="review-error-msg"></span>
+        </div>
+
+        <form id="review-form" onsubmit="handleReviewSubmit(event)">
+          <div class="form-group" id="book-select-group">
+            <div style="margin-bottom: 1rem;">
+              <label class="form-label" for="review-book-title">Tên tác phẩm</label>
+              <input type="text" id="review-book-title" class="form-control" placeholder="Nhập tên tác phẩm..." required>
+            </div>
+            <div>
+              <label class="form-label" for="review-book-author">Tên tác giả</label>
+              <input type="text" id="review-book-author" class="form-control" placeholder="Nhập tên tác giả..." required>
+            </div>
+          </div>
+
+          <!-- Rating sao -->
+          <div class="form-group">
+            <label class="form-label">Chấm điểm của bạn</label>
+            <div class="star-picker">
+              <input type="radio" id="star5" name="rating" value="5" required />
+              <label for="star5" title="5 sao"><i class="fa-solid fa-star"></i></label>
+              <input type="radio" id="star4" name="rating" value="4" />
+              <label for="star4" title="4 sao"><i class="fa-solid fa-star"></i></label>
+              <input type="radio" id="star3" name="rating" value="3" />
+              <label for="star3" title="3 sao"><i class="fa-solid fa-star"></i></label>
+              <input type="radio" id="star2" name="rating" value="2" />
+              <label for="star2" title="2 sao"><i class="fa-solid fa-star"></i></label>
+              <input type="radio" id="star1" name="rating" value="1" />
+              <label for="star1" title="1 sao"><i class="fa-solid fa-star"></i></label>
+            </div>
+          </div>
+
+          <!-- Thể loại sách (Multi-select) -->
+          <div class="form-group">
+            <label class="form-label">Thể loại tác phẩm (Chọn nhiều)</label>
+            <div class="category-select-wrapper" id="review-category-select-container">
+              <!-- Render động danh sách thể loại từ database -->
+            </div>
+          </div>
+
+          <!-- Thể loại khác (nếu chọn "Khác") -->
+          <div class="form-group custom-category-container" id="custom-category-group">
+            <label class="form-label" for="review-custom-categories">Thể loại khác của bạn (Nhập các thể loại cách nhau bằng dấu phẩy)</label>
+            <input type="text" id="review-custom-categories" class="form-control" placeholder="Ví dụ: Light Novel, Kịch, Thơ cổ...">
+          </div>
+
+          <!-- Nội dung review -->
+          <div class="form-group">
+            <label class="form-label" for="review-content">Nội dung review</label>
+            <textarea id="review-content" class="form-control" rows="6" placeholder="Chia sẻ suy nghĩ, cảm nhận của bạn về cuốn sách..." required></textarea>
+          </div>
+
+          <!-- Upload hình ảnh minh họa -->
+          <div class="form-group">
+            <label class="form-label">Hình ảnh bài review (JPG, JPEG, PNG, WEBP)</label>
+            <div id="image-drag-drop-zone" class="drag-drop-zone">
+              <i class="fa-regular fa-images"></i>
+              <p>Kéo thả 1 hoặc nhiều ảnh vào đây hoặc click để chọn ảnh</p>
+              <input type="file" id="review-image-input" multiple accept="image/jpeg, image/jpg, image/png, image/webp" style="display: none;">
+            </div>
+            <!-- Hiển thị preview các ảnh đã chọn -->
+            <div id="image-preview-container" class="image-preview-container"></div>
+          </div>
+
+          <input type="hidden" id="edit-review-id" value="">
+
+          <button type="submit" class="btn btn-primary form-submit-btn" id="review-submit-btn">
+            Đăng bài viết
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       3. MODAL CHI TIẾT BÀI REVIEW & BÌNH LUẬN
+       ========================================== -->
+  <div class="modal-overlay" id="detail-modal">
+    <div class="modal-content large">
+      <div class="modal-header">
+        <h3 class="modal-title">Chi tiết bài Review</h3>
+        <button class="close-modal-btn" id="close-detail-modal-x">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Chi tiết Review -->
+        <div class="detail-review-full" id="detail-review-container">
+          <!-- Chèn động thông tin bài review -->
+        </div>
+
+        <!-- Section Bình Luận -->
+        <div class="comments-section">
+          <h4 class="comments-title">
+            <i class="fa-regular fa-comments"></i> Bình luận cộng đồng
+          </h4>
+          
+          <!-- Danh sách bình luận -->
+          <div class="comment-list" id="comments-list-container">
+            <!-- Chèn động comments -->
+          </div>
+
+          <!-- Form viết bình luận -->
+          <form id="comment-form">
+            <div class="comment-form">
+              <input type="text" id="comment-content" class="form-control comment-input" placeholder="Viết bình luận của bạn..." required>
+              <button type="submit" class="btn btn-primary">
+                Gửi <i class="fa-regular fa-paper-plane"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- NẠP THƯ VIỆN CUSTOM HOOKS -->
+  <script src="js/useAuth.js"></script>
+  <script src="js/useReviews.js"></script>
+  <script src="js/useModal.js"></script>
+  
+  <!-- NẠP LOGIC HỆ THỐNG GIAO DIỆN CHÍNH -->
+  <script src="js/common.js"></script>
+  <script src="js/reviews.js"></script>
+</body>
+</html>
