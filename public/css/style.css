@@ -1,26 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-color: #080c14;
-  --bg-surface: rgba(15, 23, 42, 0.7);
-  --bg-surface-hover: rgba(30, 41, 59, 0.85);
-  --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  --secondary-gradient: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
-  --primary: #3b82f6;
-  --primary-light: #60a5fa;
-  --accent: #d946ef;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-focus: #3b82f6;
+  --bg-color: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f1f5f9;
+  --primary-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  --secondary-gradient: linear-gradient(135deg, #059669 0%, #0891b2 100%);
+  --primary: #2563eb;
+  --primary-light: #3b82f6;
+  --accent: #c084fc;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-color: #e2e8f0;
+  --border-focus: #2563eb;
   --star-color: #fbbf24;
-  --danger: #ef4444;
-  --success: #10b981;
-  --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 8px 20px -6px rgba(0, 0, 0, 0.6);
-  --shadow-primary: 0 0 20px rgba(59, 130, 246, 0.25);
+  --danger: #dc2626;
+  --success: #16a34a;
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-primary: 0 0 15px rgba(37, 99, 235, 0.15);
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --backdrop-blur: blur(20px);
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
 }
 
 * {
@@ -37,8 +40,8 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+    radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.06) 0%, transparent 40%);
   background-attachment: fixed;
 }
 
@@ -47,7 +50,7 @@ header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(8, 12, 20, 0.75);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: var(--backdrop-blur);
   -webkit-backdrop-filter: var(--backdrop-blur);
   border-bottom: 1px solid var(--border-color);
@@ -1541,4 +1544,282 @@ select.form-control {
 @keyframes scaleIn {
   from { transform: scale(0.8); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* ==========================================
+   THEME SÁNG & BORDER-RADIUS OVERRIDES
+   ========================================== */
+
+/* Thiết lập góc bo tròn vuông vức / bo nhẹ */
+.menu-trigger-btn,
+.close-sidebar-btn,
+.sidebar-menu-item,
+.sidebar-categories,
+.btn,
+.form-control,
+.drag-drop-zone,
+.image-preview-item,
+.modal-content,
+.book-card,
+.review-card,
+.comment-item,
+.featured-slider-wrapper,
+.slide-cover-img,
+.book-cover-wrapper,
+.book-cover-img,
+.book-detail-cover img,
+.detail-review-image,
+.review-image-thumbnail,
+.sidebar-tag-btn,
+.book-card-tag,
+.book-topic-badge {
+  border-radius: var(--radius-md) !important;
+}
+
+.nav-tabs,
+.nav-tab-btn,
+.user-avatar {
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Modal and Content background override */
+.modal-content {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Sidebar background override */
+.sidebar-content {
+  background: var(--bg-surface) !important;
+  border-right: 1px solid var(--border-color) !important;
+  box-shadow: 5px 0 15px rgba(0, 0, 0, 0.02) !important;
+}
+
+.sidebar-categories {
+  background: var(--bg-color) !important;
+}
+
+/* Form controls and zones */
+.form-control {
+  background: var(--bg-color) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.form-control:focus {
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+.drag-drop-zone {
+  background: var(--bg-color) !important;
+  border: 2px dashed var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}
+
+.drag-drop-zone.dragover {
+  border-color: var(--primary) !important;
+  background: var(--bg-surface-hover) !important;
+}
+
+/* Slider and Slider Controls */
+.featured-slider-wrapper {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+.slider-btn {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+}
+
+.slider-btn:hover {
+  background: var(--bg-surface-hover) !important;
+}
+
+.slider-tag {
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Details and Comments */
+.detail-review-image {
+  background: var(--bg-color) !important;
+}
+
+.comment-item {
+  background: var(--bg-color) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.comment-author-meta {
+  color: var(--text-secondary) !important;
+}
+
+.comment-text {
+  color: var(--text-primary) !important;
+}
+
+/* Star picker customization to fit light mode */
+.star-picker label {
+  color: #cbd5e1 !important; /* light grey for unselected stars */
+}
+
+.star-picker input:checked ~ label,
+.star-picker label:hover,
+.star-picker label:hover ~ label {
+  color: var(--star-color) !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ==========================================
+   ĐỒNG BỘ MÀU CHỮ TRÊN NỀN GIAO DIỆN SÁNG
+   ========================================== */
+
+/* Màu chữ chính cho toàn bộ trang và card */
+body, 
+.book-card-title, 
+.book-title,
+.modal-title,
+.reviewer-name,
+.comment-author,
+.book-detail-title,
+.form-label,
+.username-display,
+.slider-title,
+.detail-review-full .book-title {
+  color: #212529 !important;
+}
+
+/* Màu chữ phụ cho mô tả, tác giả, ngày tháng */
+.book-card-author,
+.book-author,
+.book-card-desc,
+.book-detail-desc,
+.review-body,
+.review-content-body,
+.comment-text,
+.reviewer-meta span,
+.review-date,
+.slider-author,
+.slider-desc,
+.form-control::placeholder,
+.drag-drop-zone p {
+  color: #495057 !important;
+}
+
+/* Màu xám nhẹ cho thông tin phụ, ngày tháng nhỏ */
+.comment-date,
+.sidebar-content p {
+  color: #6c757d !important;
+}
+
+/* Navbar Tabs và Buttons */
+.nav-tab-btn {
+  color: #495057 !important;
+}
+
+.nav-tab-btn.active {
+  color: #ffffff !important; /* Chữ trắng trên nền gradient tối của tab active */
+}
+
+.btn-secondary {
+  background: #f1f5f9 !important;
+  color: #212529 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0 !important;
+}
+
+.btn-text {
+  color: #495057 !important;
+}
+
+.btn-text:hover {
+  color: var(--primary) !important;
+}
+
+/* Sidebar Menu Item */
+.sidebar-menu-item {
+  color: #495057 !important;
+}
+
+.sidebar-menu-item:hover {
+  color: #212529 !important;
+  background: #f1f5f9 !important;
+}
+
+/* Comments Section */
+.comment-item {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.comment-author-meta {
+  color: #6c757d !important;
+}
+
+/* Modal body input text */
+.form-control {
+  color: #212529 !important;
+}
+
+/* Detail modal read-only review body */
+.review-content-body {
+  color: #212529 !important;
+}
+
+/* Đồng bộ nền các wrapper chứa ảnh để khớp với theme sáng */
+.book-cover-wrapper,
+.book-detail-cover,
+.review-image-thumbnail,
+.detail-review-image {
+  background: var(--bg-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Cố định màu chữ trong thẻ slider right nổi bật, không mờ nhạt/chuyển màu */
+.slider-right .slider-title {
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  color: #0f172a !important; /* Màu chữ tiêu đề cố định, nổi bật */
+  font-weight: 800 !important;
+}
+
+.slider-right .slider-author {
+  color: #334155 !important; /* Màu tác giả cố định rõ ràng */
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+.slider-right .slider-desc {
+  color: #475569 !important; /* Màu mô tả cố định rõ ràng */
+  font-weight: 400 !important;
+  opacity: 1 !important;
 }

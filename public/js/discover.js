@@ -35,13 +35,12 @@ function renderBooksList(books = booksList) {
       return `<span class="book-card-tag" onclick="event.stopPropagation(); filterBookByTag('${cleanTag}')">#${cleanTag}</span>`;
     }).join(' ');
 
-    const defaultImage = './images/default_cover.svg';
-    const coverImage = book.image || defaultImage;
+    const coverImage = window.normalizeImagePath(book.image);
 
     return `
       <div class="book-card" onclick="openBookDetail(${book.id})">
         <div class="book-cover-wrapper">
-          <img src="${coverImage}" class="book-cover-img" alt="${book.title}" onerror="this.src='${defaultImage}'">
+          <img src="${coverImage}" class="book-cover-img" alt="${book.title}" onerror="this.onerror=null; this.src='/uploads/covers/default_cover.svg'">
         </div>
         <div class="book-info">
           <h3 class="book-card-title" title="${book.title}">${book.title}</h3>
@@ -76,8 +75,7 @@ function renderSlider() {
 
   container.style.display = 'block';
   const book = featuredBooks[currentSlideIndex];
-  const defaultImage = './images/default_cover.svg';
-  const coverImage = book.image || defaultImage;
+  const coverImage = window.normalizeImagePath(book.image);
   const tagList = (book.tags || 'Khác').split(',');
   const mainTag = tagList[0] || 'Khác';
 
@@ -85,7 +83,7 @@ function renderSlider() {
     <button class="slider-btn prev" onclick="prevSlide()"><i class="fa-solid fa-chevron-left"></i></button>
     <div class="slider-slide">
       <div class="slider-left">
-        <img src="${coverImage}" class="slide-cover-img" alt="${book.title}" onerror="this.src='${defaultImage}'">
+        <img src="${coverImage}" class="slide-cover-img" alt="${book.title}" onerror="this.onerror=null; this.src='/uploads/covers/default_cover.svg'">
       </div>
       <div class="slider-right">
         <span class="slider-tag">${mainTag}</span>
@@ -127,17 +125,11 @@ function stopSliderAutoplay() {
 // ==========================================
 async function fetchBooksData() {
   try {
-    const url = searchKeyword.trim() !== '' 
-      ? `/api/books?search=${encodeURIComponent(searchKeyword)}` 
-      : '/api/books';
-    const response = await fetch(url);
-    const data = await response.json();
-    if (response.ok) {
-      booksList = data;
-      featuredBooks = data.slice(0, 5);
-      renderBooksList();
-      renderSlider();
-    }
+    const data = await window.booksHook.fetchBooks(searchKeyword);
+    booksList = data;
+    featuredBooks = data.slice(0, 5);
+    renderBooksList();
+    renderSlider();
   } catch (error) {
     showToast('Lỗi tải dữ liệu sách: ' + error.message, 'error');
   }
@@ -149,13 +141,10 @@ async function filterBookByTag(tag) {
     const input = document.getElementById('book-search-input');
     if (input) input.value = tag;
     
-    const response = await fetch(`/api/books/topic/${encodeURIComponent(tag)}`);
-    const data = await response.json();
-    if (response.ok) {
-      booksList = data;
-      renderBooksList();
-      renderSlider(); // Ẩn slider khi đang lọc
-    }
+    const data = await window.booksHook.fetchBooksByTopic(tag);
+    booksList = data;
+    renderBooksList();
+    renderSlider(); // Ẩn slider khi đang lọc
   } catch (error) {
     showToast('Lỗi lọc theo thể loại: ' + error.message, 'error');
   }
@@ -171,11 +160,11 @@ async function openBookDetail(bookId) {
     if (!resBook.ok) throw new Error(book.message || 'Không thể tải sách.');
     
     currentDetailBook = book;
-    const defaultImage = './images/default_cover.svg';
+    const defaultImage = '/uploads/covers/default_cover.svg';
 
     document.getElementById('book-detail-info-wrapper').innerHTML = `
       <div class="book-detail-cover">
-        <img src="${book.image || defaultImage}" alt="${book.title}" onerror="this.src='${defaultImage}'">
+        <img src="${window.normalizeImagePath(book.image)}" alt="${book.title}" onerror="this.onerror=null; this.src='/uploads/covers/default_cover.svg'">
       </div>
       <div class="book-detail-info">
         <h2 class="book-detail-title">${book.title}</h2>
@@ -184,9 +173,12 @@ async function openBookDetail(bookId) {
           ⭐ ${parseFloat(book.averageRating || 0).toFixed(1)} (${book.reviewCount || 0} bài đánh giá)
         </p>
         <p class="book-detail-desc">${book.description || 'Chưa có mô tả cho cuốn sách này.'}</p>
-        <div class="book-card-tags">
+        <div class="book-card-tags" style="margin-bottom: 1.2rem;">
           ${(book.tags || 'Khác').split(',').map(t => `<span class="book-card-tag">#${t.trim()}</span>`).join(' ')}
         </div>
+        <button class="btn btn-primary" onclick="writeReviewForBook('${escapeHtml(book.title)}', '${escapeHtml(book.author)}')" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+          <i class="fa-solid fa-pen-to-square"></i> Viết đánh giá cho tác phẩm
+        </button>
       </div>
     `;
 
@@ -198,6 +190,13 @@ async function openBookDetail(bookId) {
     showToast(error.message, 'error');
   }
 }
+
+// Chuyển hướng người dùng sang trang Reviews để viết đánh giá
+function writeReviewForBook(title, author) {
+  bookDetailModal.close();
+  window.location.href = `reviews.html?write=true&title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}`;
+}
+window.writeReviewForBook = writeReviewForBook;
 
 // Tải đánh giá của riêng sách (Đồng bộ hiển thị ảnh và click zoom)
 async function loadBookReviews(bookId) {
@@ -233,8 +232,8 @@ async function loadBookReviews(bookId) {
         ? `
           <div class="review-images-grid" onclick="event.stopPropagation()">
             ${review.images.map(img => `
-              <div class="review-image-thumbnail" onclick="window.openImageModal('/${img}')">
-                <img src="/${img}" alt="review image">
+              <div class="review-image-thumbnail" onclick="window.openImageModal('${img}')">
+                <img src="${window.normalizeImagePath(img)}" alt="review image">
               </div>
             `).join('')}
           </div>

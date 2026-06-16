@@ -183,22 +183,6 @@ function createReviewsHook() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Không thể xóa bình luận.');
       return true;
-    },
-
-    // Tải danh sách tất cả các cuốn sách có sẵn (dành cho dropdown khi thêm review)
-    fetchBooks: async () => {
-      const response = await fetch('/api/books');
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Không thể tải danh sách sách.');
-      return data;
-    },
-
-    // Tải danh sách sách theo chủ đề (Tích hợp ghép nối API)
-    fetchBooksByTopic: async (topic) => {
-      const response = await fetch(`/api/books/topic/${encodeURIComponent(topic)}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Không thể tải danh sách sách theo chủ đề.');
-      return data;
     }
   };
 }

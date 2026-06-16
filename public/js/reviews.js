@@ -81,8 +81,8 @@ function renderReviewsList(reviews = window.reviewsHook.getReviews()) {
       ? `
         <div class="review-images-grid" onclick="event.stopPropagation()">
           ${review.images.map(img => `
-            <div class="review-image-thumbnail" onclick="window.openImageModal('/${img}')">
-              <img src="/${img}" alt="review image">
+            <div class="review-image-thumbnail" onclick="window.openImageModal('${img}')">
+              <img src="${window.normalizeImagePath(img)}" alt="review image">
             </div>
           `).join('')}
         </div>
@@ -288,8 +288,8 @@ async function openEditReview(reviewId) {
   }
 }
 
-// Bắt sự kiện viết đánh giá mới
-document.getElementById('btn-write-review').addEventListener('click', () => {
+// Hàm mở modal viết review (hỗ trợ điền sẵn tên tác phẩm và tác giả)
+function openWriteReviewModal(title = '', author = '') {
   if (!window.authHook.isAuthenticated()) {
     showToast('Vui lòng đăng nhập trước khi viết đánh giá.', 'error');
     authModal.open();
@@ -298,20 +298,33 @@ document.getElementById('btn-write-review').addEventListener('click', () => {
   
   document.getElementById('review-modal-title').innerText = 'Viết bài Review Sách';
   document.getElementById('book-select-group').style.display = 'block';
-  document.getElementById('review-book-title').value = '';
-  document.getElementById('review-book-title').readOnly = false;
-  document.getElementById('review-book-author').value = '';
-  document.getElementById('review-book-author').readOnly = false;
   
+  // Reset form trước khi điền
   document.getElementById('edit-review-id').value = '';
   document.getElementById('review-form').reset();
   document.getElementById('review-error-alert').style.display = 'none';
 
+  // Điền thông tin sách nếu được truyền vào
+  const titleInput = document.getElementById('review-book-title');
+  const authorInput = document.getElementById('review-book-author');
+  
+  titleInput.value = title;
+  titleInput.readOnly = !!title; // Khóa trường nếu đã có tên sẵn
+  
+  authorInput.value = author;
+  authorInput.readOnly = !!author; // Khóa trường nếu đã có tác giả sẵn
+  
   renderCategorySelectors([]);
   selectedReviewImages = [];
   renderImagePreviews();
   
   reviewModal.open();
+}
+window.openWriteReviewModal = openWriteReviewModal;
+
+// Bắt sự kiện viết đánh giá mới từ nút click trực tiếp
+document.getElementById('btn-write-review').addEventListener('click', () => {
+  openWriteReviewModal();
 });
 
 const sidebarActionWrite = document.getElementById('sidebar-action-write');
@@ -466,7 +479,7 @@ function renderImagePreviews() {
   }
 
   container.innerHTML = selectedReviewImages.map((img, idx) => {
-    const imgSrc = img.type === 'existing' ? '/' + img.path : img.base64;
+    const imgSrc = img.type === 'existing' ? window.normalizeImagePath(img.path) : img.base64;
     return `
       <div class="image-preview-item">
         <img src="${imgSrc}" alt="preview">
@@ -603,6 +616,18 @@ async function initReviews() {
     await window.reviewsHook.fetchReviews();
   } catch (error) {
     showToast('Không thể tải danh sách reviews: ' + error.message, 'error');
+  }
+
+  // Kiểm tra nếu chuyển từ trang khám phá sang để viết review cho sách cụ thể
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('write') === 'true') {
+    const title = urlParams.get('title') || '';
+    const author = urlParams.get('author') || '';
+    if (title && author) {
+      setTimeout(() => {
+        openWriteReviewModal(title, author);
+      }, 300);
+    }
   }
 }
 

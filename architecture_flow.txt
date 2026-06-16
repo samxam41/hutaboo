@@ -1,0 +1,215 @@
+================================================================================
+       BÁO CÁO PHÂN TÍCH KIẾN TRÚC HỆ THỐNG VÀ LUỒNG HOẠT ĐỘNG - HUTABOO
+================================================================================
+
+Dự án HuTaBoo được xây dựng dưới dạng ứng dụng Desktop (Electron) kết hợp với 
+máy chủ API Backend cục bộ (Express) và cơ sở dữ liệu quan hệ MySQL.
+
+--------------------------------------------------------------------------------
+1. KIẾN TRÚC TẦNG CỦA HỆ THỐNG (LAYERED ARCHITECTURE)
+--------------------------------------------------------------------------------
+Hệ thống được tổ chức phân lớp theo mô hình Clean/Layered Architecture:
+
+     +-------------------------------------------------------+
+     |                 TẦNG PRESENTATION                     |
+     |  - Frontend: HTML/CSS/Vanilla JS (discover.html, ...) |
+     |  - Cửa sổ Desktop: Electron Container                 |
+     +-------------------------------------------------------+
+                                ↓  (HTTP Request / IPC)
+     +-------------------------------------------------------+
+     |                    TẦNG API ROUTES                    |
+     |  - Định nghĩa endpoint: routes/review.routes.js       |
+     |  - Bộ lọc trung gian: middleware (authenticateToken)  |
+     +-------------------------------------------------------+
+                                ↓  (Function Call)
+     +-------------------------------------------------------+
+     |                   TẦNG CONTROLLERS                    |
+     |  - Điều phối request: controllers/review.controller.js|
+     |  - Validate dữ liệu thông qua Domain Models           |
+     +-------------------------------------------------------+
+                                ↓  (Function Call)
+     +-------------------------------------------------------+
+     |                   TẦNG REPOSITORIES                   |
+     |  - Truy xuất dữ liệu: repositories/review.repository.js|
+     |  - Đóng gói các câu truy vấn raw SQL                  |
+     +-------------------------------------------------------+
+                                ↓  (MySQL Client Query)
+     +-------------------------------------------------------+
+     |                 TẦNG DATABASE CONNECTION              |
+     |  - Cấu hình & Pool kết nối: db/database.js            |
+     |  - Cơ sở dữ liệu vật lý: MySQL (hutaboo)             |
+     +-------------------------------------------------------+
+
+--------------------------------------------------------------------------------
+2. GIẢI THÍCH VAI TRÒ CỦA TỪNG THÀNH PHẦN
+--------------------------------------------------------------------------------
+- Database Connection (db/database.js):
+  Sử dụng thư viện `mysql2/promise` để tạo Connection Pool kết nối tới MySQL server.
+  Triển khai Singleton Pattern để đảm bảo toàn bộ ứng dụng dùng chung duy nhất một 
+  connection pool, giúp tối ưu hiệu năng và tránh rò rỉ kết nối. Tự động kiểm tra, 
+  tạo Database & Table (Migration) và nạp dữ liệu mẫu (Seeding) khi khởi động.
+
+- Models (models/review.model.js):
+  Định nghĩa cấu trúc các thực thể cốt lõi (User, Book, Review, Comment). Chứa các 
+  hàm static validation dữ liệu đầu vào (ví dụ `Review.validate`) trước khi dữ liệu 
+  được lưu xuống cơ sở dữ liệu.
+
+- Repositories (repositories/review.repository.js):
+  Triển khai Repository Pattern. Đây là nơi chứa logic tương tác với cơ sở dữ liệu. 
+  Mọi câu truy vấn SQL (SELECT, INSERT, UPDATE, DELETE) đều nằm ở đây, giúp che giấu 
+  chi tiết cài đặt truy vấn dữ liệu khỏi tầng Controllers.
+
+- Controllers (controllers/review.controller.js):
+  Đóng vai trò điều phối nghiệp vụ. Controllers tiếp nhận request từ Client, giải nén 
+  dữ liệu, gọi hàm Validate từ Model, gọi các hàm truy xuất dữ liệu từ Repositories, 
+  và gửi response (dưới dạng JSON) kèm mã HTTP Status phù hợp về cho Frontend.
+
+- Middleware (authenticateToken):
+  Là một hàm kiểm tra chặn trước khi request đi vào Controller. Middleware này giải 
+  mã JWT token gửi kèm trong Header `Authorization`, xác thực tính hợp lệ, và đính 
+  kèm thông tin user giải mã được vào đối tượng `req.user` cho Controller xử lý tiếp.
+
+- Routes (routes/review.routes.js):
+  Nơi khai báo định tuyến các đường dẫn URL API và ánh xạ chúng tới các Controller tương 
+  ứng, đồng thời chỉ định Middleware nào sẽ bảo vệ các endpoint nhạy cảm.
+
+--------------------------------------------------------------------------------
+3. DANH SÁCH ENDPOINTS API VÀ LUỒNG XỬ LÝ CHI TIẾT
+--------------------------------------------------------------------------------
+
+A. XÁC THỰC NGƯỜI DÙNG (AUTHENTICATION)
+================================================================================
+* POST /api/auth/register: Đăng ký tài khoản mới.
+  - Request: `req.body` nhận { username, password }
+  - Luồng: Route -> AuthController.register -> UserRepository.findByUsername (kiểm tra 
+    trùng) -> UserRepository.create (mã hóa mật khẩu bằng bcrypt và INSERT vào bảng users)
+    -> Trả về JSON { message, userId } với HTTP 201.
+
+* POST /api/auth/login: Đăng nhập hệ thống.
+  - Request: `req.body` nhận { username, password }
+  - Luồng: Route -> AuthController.login -> UserRepository.findByUsername -> So sánh 
+    mật khẩu bằng bcrypt -> Tạo mã token JWT -> Trả về JSON { message, token, user } với HTTP 200.
+
+* GET /api/auth/me: Lấy thông tin phiên làm việc hiện tại.
+  - Request: Header `Authorization: Bearer <token>`
+  - Luồng: Route -> Middleware authenticateToken (xác thực token) -> AuthController.getMe 
+    -> UserRepository.findById -> Trả về JSON { id, username } với HTTP 200.
+
+B. THỂ LOẠI SÁCH (CATEGORIES)
+================================================================================
+* GET /api/categories: Lấy danh sách toàn bộ các thể loại sách.
+  - Luồng: Route -> CategoryController.getAll -> CategoryRepository.getAll (Truy vấn 
+    SELECT từ bảng categories) -> Trả về JSON chứa mảng categories với HTTP 200.
+
+C. THÔNG TIN SÁCH (BOOKS)
+================================================================================
+* GET /api/books: Lấy danh sách sách (có thể lọc theo từ khóa tìm kiếm).
+  - Request: `req.query.search` (không bắt buộc)
+  - Luồng: Route -> BookController.getAll -> BookRepository.searchBooks hoặc BookRepository.getAll 
+    (Truy vấn SELECT tính toán động AVG và COUNT đánh giá từ bảng reviews thông qua LEFT JOIN) 
+    -> Trả về JSON mảng sách với HTTP 200.
+
+* GET /api/books/:id: Lấy thông tin chi tiết một cuốn sách.
+  - Request: `req.params.id`
+  - Luồng: Route -> BookController.getById -> BookRepository.getById (Truy vấn tính toán 
+    động AVG/COUNT rating của sách tương ứng) -> Trả về JSON đối tượng sách với HTTP 200 (hoặc 404).
+
+* GET /api/books/topic/:topic: Lọc sách theo thể loại.
+  - Request: `req.params.topic`
+  - Luồng: Route -> BookController.getByTopic -> BookRepository.getByTopic (Truy vấn 
+    LEFT JOIN tính rating và lọc theo tags chứa tên thể loại) -> Trả về JSON mảng sách.
+
+D. ĐÁNH GIÁ SÁCH (REVIEWS)
+================================================================================
+* GET /api/reviews: Lấy danh sách toàn bộ các bài review.
+  - Luồng: Route -> ReviewController.getAll -> ReviewRepository.getAll (SELECT kết hợp 
+    từ reviews, users, books; sau đó nạp danh sách ảnh từ review_images và thể loại từ 
+    review_categories) -> Trả về JSON mảng reviews.
+
+* GET /api/reviews/:id: Lấy chi tiết một bài review.
+  - Request: `req.params.id`
+  - Luồng: Route -> ReviewController.getById -> ReviewRepository.getById -> Trả về JSON đối tượng review.
+
+* GET /api/reviews/book/:bookId: Lấy danh sách review của riêng một cuốn sách.
+  - Request: `req.params.bookId`
+  - Luồng: Route -> ReviewController.getByBookId -> ReviewRepository.getByBookId -> Trả về JSON mảng reviews.
+
+* POST /api/reviews: Tạo đánh giá sách mới (Yêu cầu đăng nhập).
+  - Request: Header chứa JWT Token. `req.body` gồm { bookTitle, bookAuthor, rating, content, 
+    categoryIds, customCategories, imagePaths }
+  - Luồng: Route -> Middleware authenticateToken -> ReviewController.create -> Model Review.validate 
+    -> BookRepository.getOrCreate (lấy hoặc tạo sách mới) -> ReviewRepository.create (INSERT vào bảng 
+    reviews, liên kết bảng trung gian review_categories, tạo các thể loại tùy chỉnh nếu có, INSERT 
+    đường dẫn ảnh vào bảng review_images) -> BookRepository.updateCoverFromReview (cập nhật tự động 
+    ảnh đầu tiên làm bìa sách) -> Trả về JSON đối tượng review vừa tạo kèm HTTP 201.
+
+* PUT /api/reviews/:id: Sửa bài review của chính mình (Yêu cầu đăng nhập).
+  - Request: Header chứa JWT Token. `req.params.id` và `req.body` gồm { rating, content, 
+    categoryIds, customCategories, imagePaths }
+  - Luồng: Route -> Middleware authenticateToken -> ReviewController.update -> Kiểm tra tác giả bài review 
+    -> ReviewRepository.update (Cập nhật bảng reviews, xóa và chèn lại các thể loại trong review_categories, 
+    so sánh danh sách ảnh cũ-mới để thêm/xóa ảnh vật lý và record trong review_images) 
+    -> BookRepository.updateCoverFromReview (cập nhật bìa sách) -> Trả về JSON đối tượng review cập nhật.
+
+* DELETE /api/reviews/:id: Xóa bài review của chính mình (Yêu cầu đăng nhập).
+  - Request: Header chứa JWT Token. `req.params.id`
+  - Luồng: Route -> Middleware authenticateToken -> ReviewController.delete -> Kiểm tra tác giả bài review 
+    -> ReviewRepository.delete (Xóa các tệp hình ảnh vật lý, xóa review trong DB, CASCADE tự động xóa liên 
+    kết ảnh và thể loại trong DB) -> Trả về JSON thông báo thành công.
+
+* POST /api/reviews/upload: Upload các ảnh đính kèm bài review (Yêu cầu đăng nhập).
+  - Request: Header chứa JWT Token. `req.body` nhận mảng các ảnh base64 `{ images: [base64_1, base64_2, ...] }`
+  - Luồng: Route -> Middleware authenticateToken -> ReviewController.uploadImages -> Giải mã chuỗi base64 
+    -> Kiểm tra định dạng (JPG, JPEG, PNG, WEBP) -> Ghi buffer vào tệp tin trong thư mục `public/uploads/reviews/` 
+    -> Trả về JSON mảng đường dẫn tương đối `{ imagePaths: ['uploads/reviews/review-xxx.jpg', ...] }` kèm HTTP 200.
+
+E. BÌNH LUẬN (COMMENTS)
+================================================================================
+* GET /api/reviews/:reviewId/comments: Lấy các bình luận của một bài review.
+  - Request: `req.params.reviewId`
+  - Luồng: Route -> CommentController.getByReviewId -> CommentRepository.getByReviewId -> Trả về JSON.
+
+* POST /api/reviews/:reviewId/comments: Gửi bình luận mới vào bài review (Yêu cầu đăng nhập).
+  - Request: Header chứa JWT Token. `req.params.reviewId` và `req.body` gồm { content }
+  - Luồng: Route -> Middleware authenticateToken -> CommentController.create -> CommentRepository.create 
+    (INSERT vào bảng comments) -> Trả về JSON bình luận vừa tạo kèm HTTP 201.
+
+* DELETE /api/comments/:id: Xóa bình luận của chính mình (Yêu cầu đăng nhập).
+  - Request: Header chứa JWT Token. `req.params.id`
+  - Luồng: Route -> Middleware authenticateToken -> CommentController.delete -> Kiểm tra tác giả bình luận 
+    -> CommentRepository.delete (DELETE từ bảng comments) -> Trả về JSON thông báo thành công.
+
+--------------------------------------------------------------------------------
+4. SỰ DI CHUYỂN CỦA DỮ LIỆU QUA CÁC TẦNG (DATA FLOW DIAGRAM)
+--------------------------------------------------------------------------------
+
+Khi Client thực hiện một hành động (Ví dụ: Đăng một bài Review mới):
+
+1. Tầng Presentation (Frontend):
+   - Người dùng nhập tên sách, nội dung và kéo thả ảnh.
+   - Nhấn "Đăng bài viết". JS Frontend thu thập thông tin và gọi `window.reviewsHook.createReview`.
+   - Dữ liệu đóng gói thành JSON Payload gửi qua HTTP POST request tới `/api/reviews`.
+
+2. Tầng API Routes & Middleware:
+   - Web Server nhận request tại endpoint `/api/reviews`.
+   - Middleware `authenticateToken` can thiệp: Đọc Token từ Header, xác thực và lưu { id, username } của người dùng vào `req.user`. Nếu không hợp lệ, trả ngay lỗi 401/403.
+   - Nếu hợp lệ, chuyển tiếp request sang `ReviewController.create`.
+
+3. Tầng Controllers:
+   - `ReviewController.create` nhận payload từ `req.body` và thông tin người dùng từ `req.user`.
+   - Gọi `Review.validate()` để kiểm tra độ dài nội dung, số điểm sao hợp lệ.
+   - Nếu không hợp lệ, trả lỗi 400. Nếu hợp lệ, bắt đầu gọi tầng Repositories.
+
+4. Tầng Repositories:
+   - Gọi `BookRepository.getOrCreate` để truy vấn xem sách này đã có trong DB chưa, nếu chưa thì tạo bản ghi sách mới.
+   - Gọi `ReviewRepository.create` để thực hiện giao dịch INSERT bản ghi đánh giá vào cơ sở dữ liệu.
+   - Gọi `BookRepository.updateCoverFromReview` để sao chép ảnh đầu tiên của review và cập nhật nó thành ảnh bìa cuốn sách tương ứng trong DB.
+
+5. Tầng Database Connection:
+   - Thực thi các truy vấn SQL xuống MySQL Server.
+   - Trả kết quả (Insert ID, số dòng ảnh hưởng) về cho Repositories.
+   - Repositories chuyển đổi kết quả thô thành các Domain Models và trả về cho Controller.
+
+6. Kết thúc luồng:
+   - Controller tạo JSON Response chứa thông tin review mới lưu thành công và trả về cho client.
+   - JS Frontend nhận JSON, thêm review vào đầu mảng hiển thị, gọi `notify()` cập nhật giao diện thời gian thực (đóng modal, hiển thị bài viết lên màn hình).

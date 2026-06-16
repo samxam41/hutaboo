@@ -37,16 +37,54 @@ class UserRepository {
 class BookRepository {
   async getAll() {
     const pool = db.getPool();
-    const [rows] = await pool.query('SELECT * FROM books ORDER BY title ASC');
-    return rows.map(r => new Book(r.id, r.title, r.author, r.tags, r.average_rating, r.review_count, r.description, r.image));
+    const query = `
+      SELECT b.*, 
+             COALESCE(r_stats.reviewCount, 0) as reviewCount, 
+             COALESCE(r_stats.averageRating, 0) as averageRating
+      FROM books b
+      LEFT JOIN (
+        SELECT book_id, 
+               COUNT(id) as reviewCount, 
+               AVG(rating) as averageRating
+        FROM reviews
+        GROUP BY book_id
+      ) r_stats ON b.id = r_stats.book_id
+      ORDER BY b.title ASC
+    `;
+    const [rows] = await pool.query(query);
+    return rows.map(r => new Book(
+      r.id, r.title, r.author, r.tags, 
+      parseFloat(r.averageRating || 0), 
+      parseInt(r.reviewCount || 0), 
+      r.description, r.image
+    ));
   }
 
   async getById(id) {
     const pool = db.getPool();
-    const [rows] = await pool.query('SELECT * FROM books WHERE id = ?', [id]);
+    const query = `
+      SELECT b.*, 
+             COALESCE(r_stats.reviewCount, 0) as reviewCount, 
+             COALESCE(r_stats.averageRating, 0) as averageRating
+      FROM books b
+      LEFT JOIN (
+        SELECT book_id, 
+               COUNT(id) as reviewCount, 
+               AVG(rating) as averageRating
+        FROM reviews
+        GROUP BY book_id
+      ) r_stats ON b.id = r_stats.book_id
+      WHERE b.id = ?
+    `;
+    const [rows] = await pool.query(query, [id]);
     if (rows.length === 0) return null;
     const r = rows[0];
-    return new Book(r.id, r.title, r.author, r.tags, r.average_rating, r.review_count, r.description, r.image);
+    return new Book(
+      r.id, r.title, r.author, r.tags, 
+      parseFloat(r.averageRating || 0), 
+      parseInt(r.reviewCount || 0), 
+      r.description, r.image
+    );
   }
 
   async getOrCreate(title, author) {
@@ -61,10 +99,11 @@ class BookRepository {
       return rows[0].id;
     }
 
-    // Nếu chưa tồn tại, tự động tạo mới sách
+    // Nếu chưa tồn tại, tự động tạo mới sách với các chỉ số rating/reviews mặc định là 0
+    // Đánh dấu is_user_added = true để áp dụng logic ảnh bìa động từ review
     const [result] = await pool.query(
-      'INSERT INTO books (title, author, tags, average_rating, review_count, description, image) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [title.trim(), author.trim(), 'Khác', 0.00, 0, 'Chưa có mô tả cho cuốn sách này.', './images/default_cover.svg']
+      'INSERT INTO books (title, author, tags, average_rating, review_count, description, image, is_user_added) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [title.trim(), author.trim(), 'Khác', 0.00, 0, 'Chưa có mô tả cho cuốn sách này.', 'uploads/covers/default_cover.svg', true]
     );
     return result.insertId;
   }
@@ -72,36 +111,120 @@ class BookRepository {
   async getByTopic(topic) {
     const pool = db.getPool();
     const cleanTopic = `%${topic.trim()}%`;
-    const [rows] = await pool.query(
-      'SELECT * FROM books WHERE tags LIKE ? ORDER BY title ASC',
-      [cleanTopic]
-    );
-    return rows.map(r => new Book(r.id, r.title, r.author, r.tags, r.average_rating, r.review_count, r.description, r.image));
+    const query = `
+      SELECT b.*, 
+             COALESCE(r_stats.reviewCount, 0) as reviewCount, 
+             COALESCE(r_stats.averageRating, 0) as averageRating
+      FROM books b
+      LEFT JOIN (
+        SELECT book_id, 
+               COUNT(id) as reviewCount, 
+               AVG(rating) as averageRating
+        FROM reviews
+        GROUP BY book_id
+      ) r_stats ON b.id = r_stats.book_id
+      WHERE b.tags LIKE ?
+      ORDER BY b.title ASC
+    `;
+    const [rows] = await pool.query(query, [cleanTopic]);
+    return rows.map(r => new Book(
+      r.id, r.title, r.author, r.tags, 
+      parseFloat(r.averageRating || 0), 
+      parseInt(r.reviewCount || 0), 
+      r.description, r.image
+    ));
   }
 
   async searchBooks(keyword) {
     const pool = db.getPool();
     const cleanKey = `%${keyword.trim()}%`;
-    const [rows] = await pool.query(
-      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR tags LIKE ? ORDER BY title ASC',
-      [cleanKey, cleanKey, cleanKey]
-    );
-    return rows.map(r => new Book(r.id, r.title, r.author, r.tags, r.average_rating, r.review_count, r.description, r.image));
+    const query = `
+      SELECT b.*, 
+             COALESCE(r_stats.reviewCount, 0) as reviewCount, 
+             COALESCE(r_stats.averageRating, 0) as averageRating
+      FROM books b
+      LEFT JOIN (
+        SELECT book_id, 
+               COUNT(id) as reviewCount, 
+               AVG(rating) as averageRating
+        FROM reviews
+        GROUP BY book_id
+      ) r_stats ON b.id = r_stats.book_id
+      WHERE b.title LIKE ? OR b.author LIKE ? OR b.tags LIKE ?
+      ORDER BY b.title ASC
+    `;
+    const [rows] = await pool.query(query, [cleanKey, cleanKey, cleanKey]);
+    return rows.map(r => new Book(
+      r.id, r.title, r.author, r.tags, 
+      parseFloat(r.averageRating || 0), 
+      parseInt(r.reviewCount || 0), 
+      r.description, r.image
+    ));
   }
 
+  // Phương thức tĩnh được tối ưu hóa để không làm gì do đã tính động
   async updateRating(bookId) {
+    // No-op
+  }
+
+  // Tự động cập nhật ảnh bìa sách từ ảnh của bài review được đăng sớm nhất có ảnh (Chỉ áp dụng cho sách do người dùng thêm mới)
+  async updateCoverFromReview(bookId) {
     const pool = db.getPool();
-    const [rows] = await pool.query(
-      'SELECT COUNT(*) as reviewCount, AVG(rating) as averageRating FROM reviews WHERE book_id = ?',
-      [bookId]
-    );
-    const reviewCount = rows[0].reviewCount || 0;
-    const averageRating = parseFloat(rows[0].averageRating || 0).toFixed(2);
+    const fs = require('fs');
+    const path = require('path');
     
-    await pool.query(
-      'UPDATE books SET average_rating = ?, review_count = ? WHERE id = ?',
-      [averageRating, reviewCount, bookId]
-    );
+    try {
+      // 1. Kiểm tra xem sách có phải là sách do người dùng tự thêm (is_user_added = true) hay không
+      const [bookRows] = await pool.query('SELECT image, is_user_added FROM books WHERE id = ?', [bookId]);
+      if (bookRows.length === 0) return;
+
+      const isUserAdded = bookRows[0].is_user_added;
+      const currentCover = bookRows[0].image || '';
+
+      if (isUserAdded) {
+        // Tìm ảnh của bài review đăng sớm nhất cho cuốn sách này
+        const query = `
+          SELECT ri.image_path 
+          FROM reviews r
+          JOIN review_images ri ON r.id = ri.review_id
+          WHERE r.book_id = ?
+          ORDER BY r.created_at ASC, r.id ASC, ri.id ASC
+          LIMIT 1
+        `;
+        const [rows] = await pool.query(query, [bookId]);
+
+        if (rows.length > 0) {
+          const earliestImagePath = rows[0].image_path;
+          const sourceFullPath = path.join(__dirname, '../public', earliestImagePath);
+          
+          if (fs.existsSync(sourceFullPath)) {
+            const ext = path.extname(earliestImagePath);
+            const coverRelativePath = `uploads/covers/cover-${bookId}${ext}`;
+            const destFullPath = path.join(__dirname, '../public', coverRelativePath);
+            
+            const coversDir = path.dirname(destFullPath);
+            if (!fs.existsSync(coversDir)) {
+              fs.mkdirSync(coversDir, { recursive: true });
+            }
+            
+            fs.copyFileSync(sourceFullPath, destFullPath);
+            await pool.query('UPDATE books SET image = ? WHERE id = ?', [coverRelativePath, bookId]);
+            console.log(`[BookRepository] Đã cập nhật ảnh bìa thành công cho sách ID ${bookId} thành ${coverRelativePath} (từ review đăng sớm nhất)`);
+          } else {
+            console.warn(`[BookRepository] File ảnh nguồn của review không tồn tại: ${sourceFullPath}`);
+          }
+        } else {
+          // Nếu không còn bài review nào có ảnh, reset về default_cover.svg
+          const defaultCover = 'uploads/covers/default_cover.svg';
+          await pool.query('UPDATE books SET image = ? WHERE id = ?', [defaultCover, bookId]);
+          console.log(`[BookRepository] Không còn bài review nào có ảnh cho sách ID ${bookId}, đã reset ảnh bìa về mặc định.`);
+        }
+      } else {
+        console.log(`[BookRepository] Bỏ qua cập nhật ảnh bìa cho sách ID ${bookId} vì sách này đã có sẵn do admin/đại diện thêm cố định: ${currentCover}`);
+      }
+    } catch (err) {
+      console.error('[BookRepository] Lỗi cập nhật ảnh bìa từ review sớm nhất:', err.message);
+    }
   }
 }
 

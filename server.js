@@ -30,7 +30,7 @@ ipcMain.handle('select-images-dialog', async () => {
 ipcMain.handle('upload-images-via-path', async (event, filePaths) => {
   const fs = require('fs');
   const path = require('path');
-  const dir = path.join(__dirname, 'public/src');
+  const dir = path.join(__dirname, 'public/uploads/reviews');
   
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -49,7 +49,7 @@ ipcMain.handle('upload-images-via-path', async (event, filePaths) => {
     const destPath = path.join(dir, filename);
     
     fs.copyFileSync(filePath, destPath);
-    savedPaths.push('src/' + filename);
+    savedPaths.push('uploads/reviews/' + filename);
   }
 
   return savedPaths;

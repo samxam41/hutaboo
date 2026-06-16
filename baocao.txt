@@ -1,0 +1,281 @@
+BÁO CÁO PHẢN BIỆN ĐỒ ÁN PHẦN MỀM - DỰ ÁN HUTABOO
+
+TUẦN 1: Kick off
+
+Trạng thái: Đã hoàn thành
+
+Minh chứng:
+
+* File: BTL Module 2 - hutaboo.docx
+* Chức năng: Tài liệu định nghĩa đề tài, mục tiêu và phạm vi MVP.
+* Mô tả: Tài liệu chứa phần mô tả chi tiết đề tài "HuTaBoo – Ứng dụng mạng xã hội chia sẻ sách đã đọc", xác định các mục tiêu cốt lõi (chia sẻ sách, viết review & rating, xem và tìm kiếm sách) và chốt phạm vi MVP (lược bỏ đăng nhập, like, follow, chat, AI...).
+
+Nhận xét:
+
+* Dự án đã định nghĩa phạm vi MVP rất rõ ràng, thực tế và tập trung vào các chức năng cốt lõi nhất nhằm đảm bảo tính khả thi.
+
+Thiếu:
+
+* Không có.
+
+---
+
+TUẦN 2: Review MVP
+
+Trạng thái: Đã hoàn thành
+
+Minh chứng:
+
+* File: BTL Module 2 - hutaboo.docx
+* Chức năng: Tài liệu hóa User Stories, Use Cases, mô tả I/O và loại bỏ các tính năng phụ ngoài phạm vi MVP.
+* Mô tả: Cung cấp 2 User Stories chính (US1 - Đăng bài review, US2 - Xem/Tìm kiếm sách), các bước luồng nghiệp vụ chi tiết của Use Case, bảng mô tả chi tiết dữ liệu vào/ra (Input/Output) cho các hàm, và danh sách 7 chức năng phụ bị loại bỏ để bảo toàn phạm vi MVP.
+
+Nhận xét:
+
+* Thiết kế luồng nghiệp vụ và mô tả dữ liệu vào/ra chi tiết, khoa học, tạo cơ sở vững chắc cho việc cài đặt mã nguồn.
+
+Thiếu:
+
+* Không có.
+
+---
+
+TUẦN 3: Thiết kế kiến trúc
+
+Trạng thái: Đã hoàn thành
+
+Minh chứng:
+
+* File: BTL Module 2 - hutaboo.docx
+* Thư mục: Thư mục gốc dự án (controllers/, models/, repositories/, routes/, db/, public/)
+* Chức năng: Tài liệu thiết kế cấu trúc phân lớp hệ thống và mô hình Design Patterns.
+* Mô tả: Tài liệu mô tả kiến trúc phân lớp (Clean/Layered Architecture) với Presentation (MVC), Application (Service Layer), Infrastructure (Repository, Singleton). Trong thực tế mã nguồn, các lớp được phân chia thư mục rất rõ ràng: Presentation (public/, controllers/), Domain (models/), Infrastructure/Persistence (repositories/, db/, routes/).
+
+Nhận xét:
+
+* Việc phân chia cấu trúc thư mục trong dự án thực tế phản ánh chính xác mô hình kiến trúc Clean/Layered Architecture đã vạch ra trong tài liệu.
+
+Thiếu:
+
+* Không có.
+
+---
+
+TUẦN 4: Khởi tạo Project
+
+Trạng thái: Hoàn thành một phần
+
+Minh chứng:
+
+* File: package.json, server.js
+* Chức năng: Cấu hình và chạy dự án dưới dạng ứng dụng desktop Electron tích hợp Express backend.
+* Mô tả: Project đã được cấu hình thành công chạy Electron làm desktop container (package.json dòng 7-8: "start": "electron ."), kết hợp Express phục vụ APIs tĩnh và API endpoints tại server.js.
+
+Nhận xét:
+
+* Dựng thành công môi trường chạy song song giữa Electron và Express API Backend.
+
+Thiếu:
+
+* Chưa sử dụng ngôn ngữ TypeScript (toàn bộ dự án đang sử dụng JavaScript thuần .js).
+* Chưa có cấu hình linter (ESLint, Prettier...).
+* Chưa có cấu hình framework test nào trong package.json.
+
+---
+
+TUẦN 5: Domain model và service lõi
+
+Trạng thái: Hoàn thành một phần
+
+Minh chứng:
+
+* File: models/review.model.js
+* Class: User, Book, Review, Comment
+* Function: Review.validate (dòng 52), Comment.validate (dòng 81)
+* Mô tả: Xây dựng các lớp biểu diễn thực thể Domain Model của hệ thống và tích hợp các hàm kiểm tra tính hợp lệ dữ liệu trực tiếp trong model.
+
+Nhận xét:
+
+* Các Domain Model được thiết kế rõ ràng, tách biệt và tự đóng gói logic validate dữ liệu đầu vào.
+
+Thiếu:
+
+* Chưa tách biệt lớp Business Service độc lập như kế hoạch (AuthService, BookService, ReviewService...). Hiện tại toàn bộ business logic đang bị trộn lẫn trực tiếp bên trong lớp Controller (controllers/review.controller.js) và gọi trực tiếp Repositories.
+* Thiếu hoàn toàn Unit Test (chưa có tệp tin test và cấu hình kiểm thử).
+
+---
+
+TUẦN 6: Review draft version
+
+Trạng thái: Hoàn thành một phần
+
+Minh chứng:
+
+* File: controllers/review.controller.js, repositories/review.repository.js
+* Function: AuthController.register/login, BookController.getAll/getById, ReviewController.create/update/delete
+* Mô tả: Đã hoàn thiện các chức năng nghiệp vụ chính của bản phác thảo. Cài đặt các Design Pattern bao gồm Singleton (db/database.js) và Repository (repositories/review.repository.js).
+
+Nhận xét:
+
+* Các chức năng cốt lõi đã hoạt động ổn định trên giao diện và ghi nhận dữ liệu xuống database. Dự án áp dụng tốt mô hình Repository để bao bọc các câu lệnh SQL.
+
+Thiếu:
+
+* Chưa mở rộng test cho các nghiệp vụ chính (hoàn toàn chưa có mã nguồn test).
+
+---
+
+TUẦN 7: Tạo dữ liệu mẫu và test
+
+Trạng thái: Hoàn thành một phần
+
+Minh chứng:
+
+* File: repositories/review.repository.js
+* Class: UserRepository, BookRepository, ReviewRepository, CommentRepository, CategoryRepository
+* File: db/database.js (phương thức createTables() dòng 151-193)
+* Mô tả: Triển khai các lớp Repository kết nối dữ liệu MySQL. Thiết lập dữ liệu mẫu (Seeding) cho bảng categories và books tự động khi khởi động cơ sở dữ liệu.
+
+Nhận xét:
+
+* Quá trình khởi tạo cơ sở dữ liệu và nạp dữ liệu mẫu tự động hoạt động rất tốt, đảm bảo ứng dụng có sẵn dữ liệu demo khi chạy thử.
+
+Thiếu:
+
+* Thiếu cơ chế Mock repository và hoàn toàn không có test tự động cho tầng truy xuất dữ liệu này.
+
+---
+
+TUẦN 8: First UI
+
+Trạng thái: Đã hoàn thành
+
+Minh chứng:
+
+* File: public/discover.html, public/reviews.html
+* Thư mục: public/js/ (common.js, discover.js, reviews.js, useAuth.js, useReviews.js, useModal.js)
+* Chức năng: Giao diện người dùng cho hai trang Khám phá sách và Đánh giá mới nhất.
+* Mô tả: Dựng thành công UI hiện đại, kết nối động với các API backend thông qua fetch (useReviews.js, useAuth.js) để đăng ký/đăng nhập, tải danh sách sách, viết bài review kèm upload ảnh và bình luận. Có validate dữ liệu đầu vào từ giao diện.
+
+Nhận xét:
+
+* Giao diện thiết kế đẹp mắt, trải nghiệm chuyển đổi mượt mà và validate dữ liệu đầy đủ trước khi gửi lên máy chủ.
+
+Thiếu:
+
+* Không có.
+
+---
+
+TUẦN 9: Chức năng phụ
+
+Trạng thái: Hoàn thành một phần
+
+Minh chứng:
+
+* File: public/js/discover.js (dòng 146: filterBookByTag, dòng 272: Tìm kiếm)
+* File: public/js/reviews.js (dòng 372: renderFilterCategories, dòng 434: renderImagePreviews)
+* Mô tả: Đã phát triển chức năng tìm kiếm sách thời gian thực theo tên/tác giả/tag, lọc sách theo thể loại ở trang Khám phá, lọc review theo chủ đề ở trang Feed, và preview danh sách ảnh trước khi đăng bài.
+
+Nhận xét:
+
+* Các chức năng tìm kiếm, lọc và xem trước hình ảnh hoạt động tốt, mang lại trải nghiệm tương tác cao.
+
+Thiếu:
+
+* Thiếu chức năng Thống kê (Statistics) dữ liệu (như thống kê số lượng sách, số lượng review, phân bố điểm đánh giá...) theo yêu cầu của kế hoạch Tuần 9.
+
+---
+
+TUẦN 10: Review và Refactor
+
+Trạng thái: Hoàn thành một phần
+
+Minh chứng:
+
+* Thư mục: public/js/ (common.js, discover.js, reviews.js)
+* Chức năng: Tách biệt mã nguồn JS dùng chung và riêng, tối ưu hóa code smell, định cấu trúc lại project.
+* Mô tả: Dự án đã được refactor sạch sẽ sau khi tách trang HTML, tái sử dụng mã nguồn hiệu quả qua common.js.
+
+Nhận xét:
+
+* Cấu trúc mã nguồn hiện tại rất gọn gàng, các thành phần được định vị rõ ràng.
+
+Thiếu:
+
+* Chưa tăng độ bao phủ kiểm thử (Test coverage bằng 0%).
+* Một số nguyên tắc SOLID chưa được áp dụng tối ưu (như Single Responsibility Principle của Controller và Dependency Inversion Principle).
+
+---
+
+TUẦN 11: Báo cáo và slide
+
+Trạng thái: Hoàn thành một phần
+
+Minh chứng:
+
+* File: BTL Module 2 - hutaboo.docx
+* Chức năng: Tài liệu giải thích kiến trúc và Design Patterns dự kiến.
+* Mô tả: Tài liệu chứa phần giải thích mô hình kiến trúc MVC, Service, Repository, Singleton ở Tuần 3.
+
+Nhận xét:
+
+* Tài liệu có sự đầu tư ban đầu tốt ở phần kiến trúc.
+
+Thiếu:
+
+* Tài liệu Word mới chỉ dừng lại ở nội dung Tuần 3, thiếu hoàn toàn các phần giải thích chi tiết về SOLID, các Test Cases và các tuần tiếp theo.
+* Chưa có slide thuyết trình báo cáo.
+
+---
+
+TUẦN 12: Kiểm thử cuối và build demo
+
+Trạng thái: Hoàn thành một phần
+
+Minh chứng:
+
+* File: package.json, server.js
+* Chức năng: Chạy thử phiên bản demo hoàn chỉnh trên môi trường local.
+* Mô tả: Dự án đã sẵn sàng chạy thử nghiệm ổn định ở môi trường phát triển (development) qua Electron.
+
+Nhận xét:
+
+* Sản phẩm chạy mượt mà trên môi trường máy cá nhân.
+
+Thiếu:
+
+* Chưa đóng gói (build) sản phẩm ra tệp cài đặt chạy độc lập (.exe/.dmg) cho người dùng cuối (thiếu các script builder tương ứng).
+* Tài liệu nộp cuối cùng chưa hoàn thiện đầy đủ.
+
+---
+
+KẾT LUẬN CUỐI BÁO CÁO:
+
+1. Tổng % hoàn thành dự án:
+   * 66.67% (Tính dựa trên tỷ lệ: 4 tuần hoàn thành xuất sắc 100%, 8 tuần hoàn thành một phần 50% do thiếu TypeScript, test tự động, và tài liệu thuyết trình đầy đủ).
+
+2. Các Design Pattern đã tìm thấy trong source code:
+   * MVC Pattern: Chia rõ cấu trúc View (HTML/CSS/JS frontend), Controller (controllers/review.controller.js) và Model (models/review.model.js).
+   * Singleton Pattern: Lớp Database (db/database.js) đảm bảo chỉ duy nhất một connection pool được khởi tạo và sử dụng toàn cục.
+   * Repository Pattern: Được triển khai tại repositories/review.repository.js giúp bao bọc toàn bộ các câu lệnh SQL truy cập dữ liệu.
+   * Observer Pattern (Listener Pattern): Cài đặt trong public/js/useAuth.js và public/js/useReviews.js thông qua phương thức subscribe và notify để đồng bộ trạng thái đăng nhập và danh sách review lên UI.
+
+3. Các nguyên tắc SOLID đã áp dụng:
+   * Single Responsibility Principle (SRP): Được áp dụng tốt ở tầng Repositories (chỉ làm nhiệm vụ truy vấn DB) và Models (chỉ làm nhiệm vụ biểu diễn thực thể dữ liệu và validate). Tuy nhiên, tầng Controllers vẫn đang vi phạm khi đảm nhận cả logic điều phối HTTP lẫn business logic.
+   * Open/Closed Principle (OCP): Mô hình dữ liệu mở rộng cho thể loại (categories và bảng trung gian review_categories) cho phép thêm mới các thể loại tự nhập mà không cần sửa đổi cấu trúc bảng chính.
+
+4. Các vấn đề còn tồn tại:
+   * Dự án hoàn toàn không có kiểm thử tự động (Unit Test / Integration Test), vi phạm nghiêm trọng kế hoạch kiểm thử từ Tuần 4 đến Tuần 12.
+   * Chưa chuyển đổi dự án sang ngôn ngữ TypeScript như kế hoạch (vẫn dùng JavaScript thuần).
+   * Thiếu tầng Service độc lập làm trung gian giữa Controller và Repository, dẫn đến vi phạm nguyên tắc SRP ở Controller.
+   * Thiếu chức năng thống kê số liệu ở Tuần 9.
+   * Chưa cấu hình linter và chưa build đóng gói ứng dụng desktop cuối cùng.
+   * Tài liệu Word (BTL Module 2 - hutaboo.docx) chưa viết xong (mới đến Tuần 3) và thiếu slide báo cáo.
+
+5. Đề xuất cải thiện trước khi nộp đồ án:
+   * Bổ sung thư viện Jest và viết các Unit Test cơ bản cho Domain Models (validate) và Repositories (mock DB) để đạt yêu cầu về kiểm thử.
+   * Tách business logic từ controllers/review.controller.js ra các file Service riêng biệt (ví dụ: services/review.service.js) để tuân thủ nguyên tắc SRP và thiết kế kiến trúc tuần 3.
+   * Bổ sung tính năng thống kê dữ liệu cơ bản (ví dụ: thống kê số review theo từng cuốn sách, số lượng sách theo từng thể loại) hiển thị trên UI.
+   * Bổ sung cấu hình linter (ESLint) và script đóng gói (electron-builder) trong package.json để build ra file .exe/.dmg demo thực tế.
+   * Hoàn thiện tài liệu Word BTL Module 2 cho các tuần tiếp theo và làm slide thuyết trình.

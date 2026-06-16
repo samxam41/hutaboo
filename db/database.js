@@ -82,7 +82,8 @@ class Database {
         average_rating DECIMAL(3,2) DEFAULT 0.00,
         review_count INT DEFAULT 0,
         description TEXT DEFAULT NULL,
-        image VARCHAR(255) DEFAULT NULL
+        image VARCHAR(255) DEFAULT NULL,
+        is_user_added BOOLEAN DEFAULT FALSE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `;
 
@@ -140,6 +141,14 @@ class Database {
 
     await this.pool.query(createUsersTable);
     await this.pool.query(createBooksTable);
+
+    // Check if is_user_added column exists in books
+    const [columns] = await this.pool.query("SHOW COLUMNS FROM books LIKE 'is_user_added'");
+    if (columns.length === 0) {
+      await this.pool.query("ALTER TABLE books ADD COLUMN is_user_added BOOLEAN DEFAULT FALSE");
+      console.log("[Database] Đã thêm cột is_user_added vào bảng books.");
+    }
+
     await this.pool.query(createReviewsTable);
     await this.pool.query(createCommentsTable);
     await this.pool.query(createCategoriesTable);
@@ -179,11 +188,11 @@ class Database {
     const [books] = await this.pool.query('SELECT COUNT(*) as count FROM books');
     if (books[0].count === 0) {
       const seedBooks = [
-        ['Doraemon', 'Fujiko F. Fujio', 'Manga, Thiếu nhi, Viễn tưởng, Hài hước', 4.5, 1250, 'Chú mèo máy thông minh đến từ tương lai với chiếc túi thần kỳ chứa các bảo bối tiện ích giúp đỡ cậu bạn Nobita hậu đậu.', './images/doraemon.svg'],
-        ['One Piece', 'Eiichiro Oda', 'Manga, Phiêu lưu, Hành động', 4.9, 5000, 'Hành trình hải tặc đầy cảm hứng về tình bạn của Monkey D. Luffy và băng Mũ Rơm trên con đường đi tìm kho báu huyền thoại One Piece.', './images/onepiece.svg'],
-        ['Mắt Biếc', 'Nguyễn Nhật Ánh', 'Văn học Việt Nam, Tình cảm, Lãng mạn', 5.0, 5500, 'Câu chuyện tình đơn phương đầy day dứt và hoài niệm của Ngạn dành cho Hà Lan - cô bạn thanh mai trúc mã có đôi mắt biếc sâu thẳm.', './images/matbiec.svg'],
-        ['Harry Potter', 'J.K. Rowling', 'Tiểu thuyết, Kỳ ảo, Phiêu lưu', 4.8, 8500, 'Thế giới phép thuật đầy mê hoặc xoay quanh cuộc sống và cuộc đấu tranh của cậu bé phù thủy Harry Potter chống lại Chúa tể hắc ám Voldemort.', './images/harrypotter.svg'],
-        ['Thám tử lừng danh Conan', 'Gosho Aoyama', 'Manga, Trinh thám, Học đường', 5.0, 4200, 'Các vụ án ly kỳ và màn đấu trí đỉnh cao của cậu thám tử trung học Kudo Shinichi bị thu nhỏ dưới hình dạng đứa trẻ tiểu học Conan.', './images/conan.svg']
+        ['Doraemon', 'Fujiko F. Fujio', 'Manga, Thiếu nhi, Viễn tưởng, Hài hước', 0.0, 0, 'Chú mèo máy thông minh đến từ tương lai với chiếc túi thần kỳ chứa các bảo bối tiện ích giúp đỡ cậu bạn Nobita hậu đậu.', './images/doraemon.svg'],
+        ['One Piece', 'Eiichiro Oda', 'Manga, Phiêu lưu, Hành động', 0.0, 0, 'Hành trình hải tặc đầy cảm hứng về tình bạn của Monkey D. Luffy và băng Mũ Rơm trên con đường đi tìm kho báu huyền thoại One Piece.', './images/onepiece.svg'],
+        ['Mắt Biếc', 'Nguyễn Nhật Ánh', 'Văn học Việt Nam, Tình cảm, Lãng mạn', 0.0, 0, 'Câu chuyện tình đơn phương đầy day dứt và hoài niệm của Ngạn dành cho Hà Lan - cô bạn thanh mai trúc mã có đôi mắt biếc sâu thẳm.', './images/matbiec.svg'],
+        ['Harry Potter', 'J.K. Rowling', 'Tiểu thuyết, Kỳ ảo, Phiêu lưu', 0.0, 0, 'Thế giới phép thuật đầy mê hoặc xoay quanh cuộc sống và cuộc đấu tranh của cậu bé phù thủy Harry Potter chống lại Chúa tể hắc ám Voldemort.', './images/harrypotter.svg'],
+        ['Thám tử lừng danh Conan', 'Gosho Aoyama', 'Manga, Trinh thám, Học đường', 0.0, 0, 'Các vụ án ly kỳ và màn đấu trí đỉnh cao của cậu thám tử trung học Kudo Shinichi bị thu nhỏ dưới hình dạng đứa trẻ tiểu học Conan.', './images/conan.svg']
       ];
       await this.pool.query(
         'INSERT INTO books (title, author, tags, average_rating, review_count, description, image) VALUES ?',
@@ -192,11 +201,9 @@ class Database {
       console.log('[Database] Đã nạp dữ liệu sách mặc định (seeding) từ SQLite của desktop.');
     }
 
-    // Đồng bộ lại phần mở rộng ảnh từ .png sang .svg nếu đã được tạo từ trước
-    await this.pool.query("UPDATE books SET image = REPLACE(image, '.png', '.svg') WHERE image LIKE '%.png'");
-
     // Thực hiện Migration dữ liệu cũ sang cấu trúc mới nhiều-nhiều
     await this.migrateOldReviewCategories();
+    await this.migrateBookCovers();
   }
 
   /**
@@ -228,6 +235,138 @@ class Database {
       console.log('[Database Migration] Đã đồng bộ thành công thể loại của các bài viết cũ.');
     } catch (error) {
       console.error('[Database Migration] Lỗi đồng bộ dữ liệu cũ:', error.message);
+    }
+  }
+
+  /**
+   * Đồng bộ các đường dẫn ảnh bìa của sách với các file vật lý thực tế trong thư mục public/uploads/covers
+   */
+  async migrateBookCovers() {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const coversDir = path.join(__dirname, '../public/uploads/covers');
+      
+      if (!fs.existsSync(coversDir)) {
+        console.warn(`[Database Migration] Warning: Thư mục ${coversDir} không tồn tại.`);
+        return;
+      }
+
+      const physicalFiles = fs.readdirSync(coversDir);
+      const [books] = await this.pool.query('SELECT id, title, image FROM books');
+      let updateCount = 0;
+
+      for (const book of books) {
+        let originalPath = book.image || '';
+        let newPath = originalPath;
+
+        // Xác định xem ảnh bìa hiện tại có phải là default hoặc được tạo động không
+        const isDefaultCover = originalPath === 'uploads/covers/default_cover.svg' || originalPath === '' || originalPath === './images/default_cover.svg';
+        const isDynamicCover = originalPath.includes('uploads/covers/cover-');
+
+        if (isDefaultCover || isDynamicCover) {
+          // 1. Kiểm tra xem sách có bài review nào có ảnh không
+          const [reviewRows] = await this.pool.query(`
+            SELECT ri.image_path 
+            FROM reviews r
+            JOIN review_images ri ON r.id = ri.review_id
+            WHERE r.book_id = ?
+            ORDER BY r.created_at ASC, r.id ASC, ri.id ASC
+            LIMIT 1
+          `, [book.id]);
+
+          if (reviewRows.length > 0) {
+            // Quy tắc mới cho sách chưa có ảnh bìa riêng: Sử dụng ảnh của bài review đăng sớm nhất
+            const earliestImagePath = reviewRows[0].image_path;
+            const sourceFullPath = path.join(__dirname, '../public', earliestImagePath);
+            
+            if (fs.existsSync(sourceFullPath)) {
+              const ext = path.extname(earliestImagePath);
+              const coverRelativePath = `uploads/covers/cover-${book.id}${ext}`;
+              const destFullPath = path.join(__dirname, '../public', coverRelativePath);
+              
+              try {
+                fs.copyFileSync(sourceFullPath, destFullPath);
+                newPath = coverRelativePath;
+              } catch (copyErr) {
+                console.error(`[Database Migration] Lỗi copy ảnh bìa từ review sớm nhất cho sách ID ${book.id}:`, copyErr.message);
+              }
+            }
+          } else if (isDynamicCover) {
+            // Nếu là ảnh bìa động nhưng không còn review nào có ảnh, reset về default_cover.svg
+            newPath = 'uploads/covers/default_cover.svg';
+          }
+        }
+
+        // 2. Nếu không có review có ảnh hoặc lỗi copy, thực hiện quy tắc cũ (sửa đường dẫn sai)
+        if (newPath === originalPath) {
+          // Xử lý đường dẫn tuyệt đối (nếu có, e.g. C:/project/uploads/...)
+          if (originalPath.includes(':') || originalPath.startsWith('\\\\')) {
+            const normalized = originalPath.replace(/\\/g, '/');
+            const match = normalized.match(/(?:public\/)?(uploads\/.*|images\/.*)/i);
+            if (match && match[1]) {
+              newPath = match[1];
+            } else {
+              newPath = 'uploads/covers/default_cover.svg';
+            }
+          }
+
+          // Dọn dẹp phân tách đường dẫn
+          newPath = newPath.replace(/\\/g, '/');
+          if (newPath.startsWith('./')) {
+            newPath = newPath.substring(2);
+          }
+
+          // Kiểm tra xem file ảnh có thực sự tồn tại trên đĩa không
+          const physicalPath = path.join(__dirname, '../public', newPath);
+          const fileExists = fs.existsSync(physicalPath);
+
+          // Nếu file không tồn tại, hoặc đường dẫn là dạng cũ ./images/... hoặc images/...
+          if (!fileExists || newPath.startsWith('images/')) {
+            const fileNameWithExt = newPath.split('/').pop();
+            const ext = path.extname(fileNameWithExt);
+            const baseName = path.basename(fileNameWithExt, ext);
+
+            // Tìm file ảnh trong public/uploads/covers có cùng tên (không phân biệt hoa/thường)
+            let matchFile = physicalFiles.find(f => {
+              const fExt = path.extname(f);
+              const fBase = path.basename(f, fExt);
+              return fBase.toLowerCase() === baseName.toLowerCase() || 
+                     fBase.toLowerCase() === book.title.replace(/\s+/g, '').toLowerCase();
+            });
+
+            // Nếu không tìm thấy, thử tìm theo tên sách viết liền hoặc chứa từ khóa
+            if (!matchFile) {
+              matchFile = physicalFiles.find(f => {
+                const fExt = path.extname(f);
+                const fBase = path.basename(f, fExt);
+                const cleanTitle = book.title.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                const cleanFBase = fBase.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                return cleanFBase === cleanTitle || cleanTitle.includes(cleanFBase) || cleanFBase.includes(cleanTitle);
+              });
+            }
+
+            if (matchFile) {
+              newPath = `uploads/covers/${matchFile}`;
+            } else {
+              newPath = 'uploads/covers/default_cover.svg';
+            }
+          }
+        }
+
+        // 3. Nếu đường dẫn thay đổi, cập nhật cơ sở dữ liệu
+        if (newPath !== originalPath) {
+          console.log(`[Database Migration] Cập nhật sách ID ${book.id} ("${book.title}"): "${originalPath}" -> "${newPath}"`);
+          await this.pool.query('UPDATE books SET image = ? WHERE id = ?', [newPath, book.id]);
+          updateCount++;
+        }
+      }
+
+      if (updateCount > 0) {
+        console.log(`[Database Migration] Hoàn thành cập nhật ảnh bìa cho ${updateCount} cuốn sách.`);
+      }
+    } catch (error) {
+      console.error('[Database Migration] Lỗi đồng bộ ảnh bìa:', error.message);
     }
   }
 

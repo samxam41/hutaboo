@@ -194,6 +194,9 @@ const ReviewController = {
         imagePaths || []
       );
       
+      // Cập nhật ảnh bìa sách tự động từ bài review được đăng sớm nhất có ảnh
+      await BookRepository.updateCoverFromReview(bookId);
+      
       // Tự động tính toán lại điểm trung bình của sách
       await BookRepository.updateRating(bookId);
       
@@ -237,6 +240,9 @@ const ReviewController = {
         imagePaths || []
       );
       
+      // Cập nhật ảnh bìa sách tự động từ bài review được đăng sớm nhất có ảnh
+      await BookRepository.updateCoverFromReview(review.bookId);
+      
       // Tự động tính toán lại điểm trung bình của sách
       await BookRepository.updateRating(review.bookId);
       
@@ -265,6 +271,9 @@ const ReviewController = {
 
       await ReviewRepository.delete(reviewId);
       
+      // Cập nhật ảnh bìa sách tự động từ bài review được đăng sớm nhất có ảnh còn lại
+      await BookRepository.updateCoverFromReview(review.bookId);
+
       // Tự động tính toán lại điểm trung bình của sách
       await BookRepository.updateRating(review.bookId);
       
@@ -283,7 +292,7 @@ const ReviewController = {
 
       const fs = require('fs');
       const path = require('path');
-      const dir = path.join(__dirname, '../public/src');
+      const dir = path.join(__dirname, '../public/uploads/reviews');
       
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -307,7 +316,7 @@ const ReviewController = {
 
         const buffer = Buffer.from(data, 'base64');
         const filename = 'review-' + Date.now() + '-' + Math.round(Math.random() * 1e9) + '.' + ext;
-        const relativePath = 'src/' + filename;
+        const relativePath = 'uploads/reviews/' + filename;
         const fullPath = path.join(dir, filename);
 
         fs.writeFileSync(fullPath, buffer);

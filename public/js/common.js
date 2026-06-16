@@ -204,6 +204,21 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
+// Chuẩn hóa đường dẫn hình ảnh (Hỗ trợ ảnh cũ ./images, ảnh mới uploads/, và ảnh base64)
+function normalizeImagePath(path) {
+  if (!path) return '/uploads/covers/default_cover.svg';
+  if (path.startsWith('data:image/')) return path; // Giữ nguyên base64
+  let p = path.trim();
+  if (p.startsWith('./')) {
+    p = p.substring(1); // Bỏ dấu chấm ở đầu, còn lại '/images/...'
+  }
+  if (!p.startsWith('/')) {
+    p = '/' + p;
+  }
+  return p;
+}
+window.normalizeImagePath = normalizeImagePath;
+
 // Click to Zoom modal ảnh toàn màn hình
 window.openImageModal = function(imgSrc) {
   const overlay = document.createElement('div');
@@ -222,7 +237,7 @@ window.openImageModal = function(imgSrc) {
   overlay.style.webkitBackdropFilter = 'blur(10px)';
   
   const img = document.createElement('img');
-  img.src = imgSrc;
+  img.src = normalizeImagePath(imgSrc);
   img.style.maxWidth = '90%';
   img.style.maxHeight = '90%';
   img.style.objectFit = 'contain';
@@ -270,8 +285,8 @@ async function openReviewDetail(reviewId) {
       ? `
         <div class="detail-review-images-grid">
           ${review.images.map(img => `
-            <div class="detail-review-image" onclick="window.openImageModal('/${img}')">
-              <img src="/${img}" alt="review image">
+            <div class="detail-review-image" onclick="window.openImageModal('${img}')">
+              <img src="${normalizeImagePath(img)}" alt="review image">
             </div>
           `).join('')}
         </div>
