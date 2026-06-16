@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron ."
+    "dev": "electron .",
+    "test": "jest",
+    "test:unit": "jest --testPathIgnorePatterns=routes.test.js",
+    "test:integration": "jest --testPathPatterns=routes.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -14,6 +17,8 @@
     "mysql2": "^3.9.7"
   },
   "devDependencies": {
-    "electron": "^41.7.1"
+    "electron": "^41.7.1",
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
   }
 }
