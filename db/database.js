@@ -204,6 +204,7 @@ class Database {
     // Thực hiện Migration dữ liệu cũ sang cấu trúc mới nhiều-nhiều
     await this.migrateOldReviewCategories();
     await this.migrateBookCovers();
+    await this.migrateBookTagsFromReviews();
   }
 
   /**
@@ -367,6 +368,50 @@ class Database {
       }
     } catch (error) {
       console.error('[Database Migration] Lỗi đồng bộ ảnh bìa:', error.message);
+    }
+  }
+
+  /**
+   * Cập nhật lại tags của tất cả sách dựa trên thể loại của các reviews hiện có
+   */
+  async migrateBookTagsFromReviews() {
+    try {
+      const [books] = await this.pool.query('SELECT id, title, tags FROM books');
+      let updateCount = 0;
+      for (const book of books) {
+        // Kiểm tra xem sách có reviews nào không
+        const [reviewCountRows] = await this.pool.query('SELECT COUNT(*) as count FROM reviews WHERE book_id = ?', [book.id]);
+        if (reviewCountRows[0].count === 0) {
+          continue;
+        }
+
+        const query = `
+          SELECT DISTINCT c.name, c.is_default
+          FROM reviews r
+          JOIN review_categories rc ON r.id = rc.review_id
+          JOIN categories c ON rc.category_id = c.id
+          WHERE r.book_id = ?
+          ORDER BY c.is_default DESC, c.name ASC
+        `;
+        const [rows] = await this.pool.query(query, [book.id]);
+        
+        let tagsStr = 'Khác';
+        if (rows.length > 0) {
+          tagsStr = rows.map(row => row.name).join(', ');
+        }
+        
+        // Chỉ cập nhật nếu tags hiện tại khác với tags tính toán được
+        if (book.tags !== tagsStr) {
+          await this.pool.query('UPDATE books SET tags = ? WHERE id = ?', [tagsStr, book.id]);
+          console.log(`[Database Migration] Đã đồng bộ tags cho sách ID ${book.id} ("${book.title}") thành: ${tagsStr}`);
+          updateCount++;
+        }
+      }
+      if (updateCount > 0) {
+        console.log(`[Database Migration] Hoàn thành cập nhật tags cho ${updateCount} cuốn sách.`);
+      }
+    } catch (error) {
+      console.error('[Database Migration] Lỗi đồng bộ tags cho sách hiện có:', error.message);
     }
   }
 

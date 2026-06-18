@@ -176,6 +176,57 @@ describe('Repositories Unit Tests', () => {
       expect(mockPool.query).toHaveBeenCalledTimes(1); // Only checked the book, did not query reviews or update
       expect(fs.copyFileSync).not.toHaveBeenCalled();
     });
+
+    test('updateTags should update book tags with concatenated names when reviews have categories', async () => {
+      mockPool.query
+        .mockResolvedValueOnce([[{ count: 1 }]]) // count reviews
+        .mockResolvedValueOnce([[{ name: 'Manga' }, { name: 'Hài hước' }]]) // select distinct categories
+        .mockResolvedValueOnce([{}]); // update book tags
+
+      await BookRepository.updateTags(10);
+      expect(mockPool.query).toHaveBeenCalledTimes(3);
+      expect(mockPool.query).toHaveBeenLastCalledWith(
+        'UPDATE books SET tags = ? WHERE id = ?',
+        ['Manga, Hài hước', 10]
+      );
+    });
+
+    test('updateTags should set tag to "Khác" if no categories are linked to the reviews', async () => {
+      mockPool.query
+        .mockResolvedValueOnce([[{ count: 1 }]]) // count reviews
+        .mockResolvedValueOnce([[]]) // select distinct categories (none found)
+        .mockResolvedValueOnce([{}]); // update book tags
+
+      await BookRepository.updateTags(10);
+      expect(mockPool.query).toHaveBeenCalledTimes(3);
+      expect(mockPool.query).toHaveBeenLastCalledWith(
+        'UPDATE books SET tags = ? WHERE id = ?',
+        ['Khác', 10]
+      );
+    });
+
+    test('updateTags should do nothing if book has no reviews and is_user_added is false', async () => {
+      mockPool.query
+        .mockResolvedValueOnce([[{ count: 0 }]]) // count reviews
+        .mockResolvedValueOnce([[{ is_user_added: 0 }]]); // select book
+
+      await BookRepository.updateTags(10);
+      expect(mockPool.query).toHaveBeenCalledTimes(2);
+    });
+
+    test('updateTags should reset tags to "Khác" if book has no reviews and is_user_added is true', async () => {
+      mockPool.query
+        .mockResolvedValueOnce([[{ count: 0 }]]) // count reviews
+        .mockResolvedValueOnce([[{ is_user_added: 1 }]]) // select book
+        .mockResolvedValueOnce([{}]); // update book tags to default
+
+      await BookRepository.updateTags(10);
+      expect(mockPool.query).toHaveBeenCalledTimes(3);
+      expect(mockPool.query).toHaveBeenLastCalledWith(
+        'UPDATE books SET tags = ? WHERE id = ?',
+        ['Khác', 10]
+      );
+    });
   });
 
   describe('ReviewRepository', () => {

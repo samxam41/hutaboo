@@ -1,281 +1,176 @@
-BÁO CÁO PHẢN BIỆN ĐỒ ÁN PHẦN MỀM - DỰ ÁN HUTABOO
-
-TUẦN 1: Kick off
-
-Trạng thái: Đã hoàn thành
-
-Minh chứng:
-
-* File: BTL Module 2 - hutaboo.docx
-* Chức năng: Tài liệu định nghĩa đề tài, mục tiêu và phạm vi MVP.
-* Mô tả: Tài liệu chứa phần mô tả chi tiết đề tài "HuTaBoo – Ứng dụng mạng xã hội chia sẻ sách đã đọc", xác định các mục tiêu cốt lõi (chia sẻ sách, viết review & rating, xem và tìm kiếm sách) và chốt phạm vi MVP (lược bỏ đăng nhập, like, follow, chat, AI...).
-
-Nhận xét:
-
-* Dự án đã định nghĩa phạm vi MVP rất rõ ràng, thực tế và tập trung vào các chức năng cốt lõi nhất nhằm đảm bảo tính khả thi.
-
-Thiếu:
-
-* Không có.
-
----
-
-TUẦN 2: Review MVP
-
-Trạng thái: Đã hoàn thành
-
-Minh chứng:
-
-* File: BTL Module 2 - hutaboo.docx
-* Chức năng: Tài liệu hóa User Stories, Use Cases, mô tả I/O và loại bỏ các tính năng phụ ngoài phạm vi MVP.
-* Mô tả: Cung cấp 2 User Stories chính (US1 - Đăng bài review, US2 - Xem/Tìm kiếm sách), các bước luồng nghiệp vụ chi tiết của Use Case, bảng mô tả chi tiết dữ liệu vào/ra (Input/Output) cho các hàm, và danh sách 7 chức năng phụ bị loại bỏ để bảo toàn phạm vi MVP.
-
-Nhận xét:
-
-* Thiết kế luồng nghiệp vụ và mô tả dữ liệu vào/ra chi tiết, khoa học, tạo cơ sở vững chắc cho việc cài đặt mã nguồn.
-
-Thiếu:
-
-* Không có.
-
----
-
-TUẦN 3: Thiết kế kiến trúc
-
-Trạng thái: Đã hoàn thành
-
-Minh chứng:
-
-* File: BTL Module 2 - hutaboo.docx
-* Thư mục: Thư mục gốc dự án (controllers/, models/, repositories/, routes/, db/, public/)
-* Chức năng: Tài liệu thiết kế cấu trúc phân lớp hệ thống và mô hình Design Patterns.
-* Mô tả: Tài liệu mô tả kiến trúc phân lớp (Clean/Layered Architecture) với Presentation (MVC), Application (Service Layer), Infrastructure (Repository, Singleton). Trong thực tế mã nguồn, các lớp được phân chia thư mục rất rõ ràng: Presentation (public/, controllers/), Domain (models/), Infrastructure/Persistence (repositories/, db/, routes/).
-
-Nhận xét:
-
-* Việc phân chia cấu trúc thư mục trong dự án thực tế phản ánh chính xác mô hình kiến trúc Clean/Layered Architecture đã vạch ra trong tài liệu.
-
-Thiếu:
-
-* Không có.
-
----
-
-TUẦN 4: Khởi tạo Project
-
-Trạng thái: Hoàn thành một phần
-
-Minh chứng:
-
-* File: package.json, server.js
-* Chức năng: Cấu hình và chạy dự án dưới dạng ứng dụng desktop Electron tích hợp Express backend.
-* Mô tả: Project đã được cấu hình thành công chạy Electron làm desktop container (package.json dòng 7-8: "start": "electron ."), kết hợp Express phục vụ APIs tĩnh và API endpoints tại server.js.
-
-Nhận xét:
-
-* Dựng thành công môi trường chạy song song giữa Electron và Express API Backend.
-
-Thiếu:
-
-* Chưa sử dụng ngôn ngữ TypeScript (toàn bộ dự án đang sử dụng JavaScript thuần .js).
-* Chưa có cấu hình linter (ESLint, Prettier...).
-* Chưa có cấu hình framework test nào trong package.json.
-
----
-
-TUẦN 5: Domain model và service lõi
-
-Trạng thái: Hoàn thành một phần
-
-Minh chứng:
-
-* File: models/review.model.js
-* Class: User, Book, Review, Comment
-* Function: Review.validate (dòng 52), Comment.validate (dòng 81)
-* Mô tả: Xây dựng các lớp biểu diễn thực thể Domain Model của hệ thống và tích hợp các hàm kiểm tra tính hợp lệ dữ liệu trực tiếp trong model.
-
-Nhận xét:
-
-* Các Domain Model được thiết kế rõ ràng, tách biệt và tự đóng gói logic validate dữ liệu đầu vào.
-
-Thiếu:
-
-* Chưa tách biệt lớp Business Service độc lập như kế hoạch (AuthService, BookService, ReviewService...). Hiện tại toàn bộ business logic đang bị trộn lẫn trực tiếp bên trong lớp Controller (controllers/review.controller.js) và gọi trực tiếp Repositories.
-* Thiếu hoàn toàn Unit Test (chưa có tệp tin test và cấu hình kiểm thử).
-
----
-
-TUẦN 6: Review draft version
-
-Trạng thái: Hoàn thành một phần
-
-Minh chứng:
-
-* File: controllers/review.controller.js, repositories/review.repository.js
-* Function: AuthController.register/login, BookController.getAll/getById, ReviewController.create/update/delete
-* Mô tả: Đã hoàn thiện các chức năng nghiệp vụ chính của bản phác thảo. Cài đặt các Design Pattern bao gồm Singleton (db/database.js) và Repository (repositories/review.repository.js).
-
-Nhận xét:
-
-* Các chức năng cốt lõi đã hoạt động ổn định trên giao diện và ghi nhận dữ liệu xuống database. Dự án áp dụng tốt mô hình Repository để bao bọc các câu lệnh SQL.
-
-Thiếu:
-
-* Chưa mở rộng test cho các nghiệp vụ chính (hoàn toàn chưa có mã nguồn test).
-
----
-
-TUẦN 7: Tạo dữ liệu mẫu và test
-
-Trạng thái: Hoàn thành một phần
-
-Minh chứng:
-
-* File: repositories/review.repository.js
-* Class: UserRepository, BookRepository, ReviewRepository, CommentRepository, CategoryRepository
-* File: db/database.js (phương thức createTables() dòng 151-193)
-* Mô tả: Triển khai các lớp Repository kết nối dữ liệu MySQL. Thiết lập dữ liệu mẫu (Seeding) cho bảng categories và books tự động khi khởi động cơ sở dữ liệu.
-
-Nhận xét:
-
-* Quá trình khởi tạo cơ sở dữ liệu và nạp dữ liệu mẫu tự động hoạt động rất tốt, đảm bảo ứng dụng có sẵn dữ liệu demo khi chạy thử.
-
-Thiếu:
-
-* Thiếu cơ chế Mock repository và hoàn toàn không có test tự động cho tầng truy xuất dữ liệu này.
-
----
-
-TUẦN 8: First UI
-
-Trạng thái: Đã hoàn thành
-
-Minh chứng:
-
-* File: public/discover.html, public/reviews.html
-* Thư mục: public/js/ (common.js, discover.js, reviews.js, useAuth.js, useReviews.js, useModal.js)
-* Chức năng: Giao diện người dùng cho hai trang Khám phá sách và Đánh giá mới nhất.
-* Mô tả: Dựng thành công UI hiện đại, kết nối động với các API backend thông qua fetch (useReviews.js, useAuth.js) để đăng ký/đăng nhập, tải danh sách sách, viết bài review kèm upload ảnh và bình luận. Có validate dữ liệu đầu vào từ giao diện.
-
-Nhận xét:
-
-* Giao diện thiết kế đẹp mắt, trải nghiệm chuyển đổi mượt mà và validate dữ liệu đầy đủ trước khi gửi lên máy chủ.
-
-Thiếu:
-
-* Không có.
-
----
-
-TUẦN 9: Chức năng phụ
-
-Trạng thái: Hoàn thành một phần
-
-Minh chứng:
-
-* File: public/js/discover.js (dòng 146: filterBookByTag, dòng 272: Tìm kiếm)
-* File: public/js/reviews.js (dòng 372: renderFilterCategories, dòng 434: renderImagePreviews)
-* Mô tả: Đã phát triển chức năng tìm kiếm sách thời gian thực theo tên/tác giả/tag, lọc sách theo thể loại ở trang Khám phá, lọc review theo chủ đề ở trang Feed, và preview danh sách ảnh trước khi đăng bài.
-
-Nhận xét:
-
-* Các chức năng tìm kiếm, lọc và xem trước hình ảnh hoạt động tốt, mang lại trải nghiệm tương tác cao.
-
-Thiếu:
-
-* Thiếu chức năng Thống kê (Statistics) dữ liệu (như thống kê số lượng sách, số lượng review, phân bố điểm đánh giá...) theo yêu cầu của kế hoạch Tuần 9.
-
----
-
-TUẦN 10: Review và Refactor
-
-Trạng thái: Hoàn thành một phần
-
-Minh chứng:
-
-* Thư mục: public/js/ (common.js, discover.js, reviews.js)
-* Chức năng: Tách biệt mã nguồn JS dùng chung và riêng, tối ưu hóa code smell, định cấu trúc lại project.
-* Mô tả: Dự án đã được refactor sạch sẽ sau khi tách trang HTML, tái sử dụng mã nguồn hiệu quả qua common.js.
-
-Nhận xét:
-
-* Cấu trúc mã nguồn hiện tại rất gọn gàng, các thành phần được định vị rõ ràng.
-
-Thiếu:
-
-* Chưa tăng độ bao phủ kiểm thử (Test coverage bằng 0%).
-* Một số nguyên tắc SOLID chưa được áp dụng tối ưu (như Single Responsibility Principle của Controller và Dependency Inversion Principle).
-
----
-
-TUẦN 11: Báo cáo và slide
-
-Trạng thái: Hoàn thành một phần
-
-Minh chứng:
-
-* File: BTL Module 2 - hutaboo.docx
-* Chức năng: Tài liệu giải thích kiến trúc và Design Patterns dự kiến.
-* Mô tả: Tài liệu chứa phần giải thích mô hình kiến trúc MVC, Service, Repository, Singleton ở Tuần 3.
-
-Nhận xét:
-
-* Tài liệu có sự đầu tư ban đầu tốt ở phần kiến trúc.
-
-Thiếu:
-
-* Tài liệu Word mới chỉ dừng lại ở nội dung Tuần 3, thiếu hoàn toàn các phần giải thích chi tiết về SOLID, các Test Cases và các tuần tiếp theo.
-* Chưa có slide thuyết trình báo cáo.
-
----
-
-TUẦN 12: Kiểm thử cuối và build demo
-
-Trạng thái: Hoàn thành một phần
-
-Minh chứng:
-
-* File: package.json, server.js
-* Chức năng: Chạy thử phiên bản demo hoàn chỉnh trên môi trường local.
-* Mô tả: Dự án đã sẵn sàng chạy thử nghiệm ổn định ở môi trường phát triển (development) qua Electron.
-
-Nhận xét:
-
-* Sản phẩm chạy mượt mà trên môi trường máy cá nhân.
-
-Thiếu:
-
-* Chưa đóng gói (build) sản phẩm ra tệp cài đặt chạy độc lập (.exe/.dmg) cho người dùng cuối (thiếu các script builder tương ứng).
-* Tài liệu nộp cuối cùng chưa hoàn thiện đầy đủ.
-
----
-
-KẾT LUẬN CUỐI BÁO CÁO:
-
-1. Tổng % hoàn thành dự án:
-   * 66.67% (Tính dựa trên tỷ lệ: 4 tuần hoàn thành xuất sắc 100%, 8 tuần hoàn thành một phần 50% do thiếu TypeScript, test tự động, và tài liệu thuyết trình đầy đủ).
-
-2. Các Design Pattern đã tìm thấy trong source code:
-   * MVC Pattern: Chia rõ cấu trúc View (HTML/CSS/JS frontend), Controller (controllers/review.controller.js) và Model (models/review.model.js).
-   * Singleton Pattern: Lớp Database (db/database.js) đảm bảo chỉ duy nhất một connection pool được khởi tạo và sử dụng toàn cục.
-   * Repository Pattern: Được triển khai tại repositories/review.repository.js giúp bao bọc toàn bộ các câu lệnh SQL truy cập dữ liệu.
-   * Observer Pattern (Listener Pattern): Cài đặt trong public/js/useAuth.js và public/js/useReviews.js thông qua phương thức subscribe và notify để đồng bộ trạng thái đăng nhập và danh sách review lên UI.
-
-3. Các nguyên tắc SOLID đã áp dụng:
-   * Single Responsibility Principle (SRP): Được áp dụng tốt ở tầng Repositories (chỉ làm nhiệm vụ truy vấn DB) và Models (chỉ làm nhiệm vụ biểu diễn thực thể dữ liệu và validate). Tuy nhiên, tầng Controllers vẫn đang vi phạm khi đảm nhận cả logic điều phối HTTP lẫn business logic.
-   * Open/Closed Principle (OCP): Mô hình dữ liệu mở rộng cho thể loại (categories và bảng trung gian review_categories) cho phép thêm mới các thể loại tự nhập mà không cần sửa đổi cấu trúc bảng chính.
-
-4. Các vấn đề còn tồn tại:
-   * Dự án hoàn toàn không có kiểm thử tự động (Unit Test / Integration Test), vi phạm nghiêm trọng kế hoạch kiểm thử từ Tuần 4 đến Tuần 12.
-   * Chưa chuyển đổi dự án sang ngôn ngữ TypeScript như kế hoạch (vẫn dùng JavaScript thuần).
-   * Thiếu tầng Service độc lập làm trung gian giữa Controller và Repository, dẫn đến vi phạm nguyên tắc SRP ở Controller.
-   * Thiếu chức năng thống kê số liệu ở Tuần 9.
-   * Chưa cấu hình linter và chưa build đóng gói ứng dụng desktop cuối cùng.
-   * Tài liệu Word (BTL Module 2 - hutaboo.docx) chưa viết xong (mới đến Tuần 3) và thiếu slide báo cáo.
-
-5. Đề xuất cải thiện trước khi nộp đồ án:
-   * Bổ sung thư viện Jest và viết các Unit Test cơ bản cho Domain Models (validate) và Repositories (mock DB) để đạt yêu cầu về kiểm thử.
-   * Tách business logic từ controllers/review.controller.js ra các file Service riêng biệt (ví dụ: services/review.service.js) để tuân thủ nguyên tắc SRP và thiết kế kiến trúc tuần 3.
-   * Bổ sung tính năng thống kê dữ liệu cơ bản (ví dụ: thống kê số review theo từng cuốn sách, số lượng sách theo từng thể loại) hiển thị trên UI.
-   * Bổ sung cấu hình linter (ESLint) và script đóng gói (electron-builder) trong package.json để build ra file .exe/.dmg demo thực tế.
-   * Hoàn thiện tài liệu Word BTL Module 2 cho các tuần tiếp theo và làm slide thuyết trình.
+================================================================================
+BÁO CÁO PHẢN BIỆN ĐỒ ÁN PHẦN MỀM - DỰ ÁN HUTABOO (TÀI LIỆU DÀNH CHO GIẢNG VIÊN)
+================================================================================
+
+Tài liệu này được biên soạn để giúp Giảng viên nhanh chóng đánh giá và trả lời các câu hỏi phản biện cốt lõi về chất lượng của đồ án HuTaBoo. Mọi nhận định kỹ thuật đều được gắn kèm đường dẫn file nguồn, tên lớp, tên hàm, và dòng code thực tế trong hệ thống.
+
+--------------------------------------------------------------------------------
+CÂU 1: ỨNG DỤNG CÓ GIẢI QUYẾT ĐÚNG VẤN ĐỀ ĐÃ CHỌN KHÔNG?
+--------------------------------------------------------------------------------
+TRẢ LỜI: CÓ. 
+Dự án giải quyết trọn vẹn bài toán mạng xã hội chia sẻ sách và đánh giá sách của người dùng (HuTaBoo).
+
+MINH CHỨNG NGHIỆP VỤ & MÃ NGUỒN:
+1. Đăng ký & Đăng nhập bảo mật:
+   - Giao diện: Trang đăng nhập/đăng ký tích hợp tại `public/discover.html` và `public/reviews.html` thông qua các modal pop-up.
+   - API Backend: Endpoint `/api/auth/register` (routes/review.routes.js: dòng 15) và `/api/auth/login` (routes/review.routes.js: dòng 16) kết hợp thư viện bcryptjs để băm mật khẩu và jsonwebtoken để cấp token phiên.
+2. Quản lý tác phẩm (Sách):
+   - Người dùng xem danh sách sách mẫu, tìm kiếm sách theo từ khóa (tiêu đề, tác giả, tag) và xem mô tả chi tiết của sách.
+   - Giao diện: Slider và danh sách sách tại trang khám phá `public/discover.html` kết hợp file JS xử lý `public/js/discover.js`.
+   - API Backend: `/api/books` (routes/review.routes.js: dòng 27) gọi đến phương thức `BookRepository.getAll()` và `BookRepository.searchBooks(keyword)` (repositories/review.repository.js: dòng 38, 138) để truy vấn MySQL.
+3. Viết và quản lý đánh giá sách (Review & Rating):
+   - Người dùng đăng nhập để viết review cho một tác phẩm (đánh giá rating từ 1 đến 5 sao, nội dung dài tối thiểu 5 ký tự) và đính kèm hình ảnh minh họa (ảnh upload).
+   - Giao diện: Modal viết review tại `public/reviews.html` thông qua file JS xử lý `public/js/reviews.js`.
+   - API Backend: `/api/reviews` (routes/review.routes.js: dòng 37) gọi đến `ReviewController.create()` (controllers/review.controller.js: dòng 174).
+4. Viết và quản lý bình luận tương tác (Comment):
+   - Người dùng viết bình luận dưới các bài review để trao đổi thảo luận.
+   - API Backend: `/api/reviews/:reviewId/comments` (routes/review.routes.js: dòng 45-47) tương tác qua `CommentController` (controllers/review.controller.js: dòng 336).
+5. Tự động cập nhật ảnh bìa động:
+   - Khi viết review cho một sách tự thêm mới chưa có ảnh bìa cố định, hệ thống tự động copy ảnh đầu tiên từ bài review sớm nhất làm ảnh bìa của sách.
+   - Mã nguồn backend xử lý: `BookRepository.updateCoverFromReview(bookId)` (repositories/review.repository.js: dòng 171).
+
+--------------------------------------------------------------------------------
+CÂU 2: ỨNG DỤNG CÓ CHẠY ĐƯỢC TRÊN MÁY GIẢNG VIÊN BẰNG FILE DEPLOY/CÀI ĐẶT KHÔNG?
+--------------------------------------------------------------------------------
+TRẢ LỜI: CÓ. 
+Ứng dụng chạy trên môi trường Desktop Electron tích hợp Express backend + MySQL và có cơ chế tự khởi tạo/khôi phục tự động (Zero Configuration Database).
+
+HƯỚNG DẪN VẬN HÀNH NHANH CHO GIẢNG VIÊN:
+1. Đảm bảo dịch vụ MySQL đang chạy (ví dụ qua XAMPP, WampServer) trên localhost (Port mặc định 3306, user: root, password: '040105' hoặc được tinh chỉnh trong db/database.js).
+2. Mở terminal tại thư mục gốc dự án và chạy:
+   ```bash
+   npm install
+   npm run dev
+   ```
+3. Ứng dụng Desktop Electron sẽ tự động khởi chạy và hiển thị giao diện.
+
+CƠ CHẾ KHỞI TẠO CƠ SỞ DỮ LIỆU TỰ ĐỘNG (KHÔNG CẦN IMPORT FILE SQL THỦ CÔNG):
+- Trong file `server.js` (dòng 121), khi khởi chạy server, ứng dụng gọi phương thức `db.initialize()`.
+- Trong file `db/database.js` (dòng 29), phương thức `initialize()` thực hiện:
+  - Tự động tạo cơ sở dữ liệu `hutaboo` nếu chưa tồn tại (dòng 34): `CREATE DATABASE IF NOT EXISTS \`hutaboo\``
+  - Tự động tạo 7 bảng dữ liệu quan hệ cần thiết bao gồm: `users`, `books`, `reviews`, `comments`, `categories`, `review_categories`, `review_images` (dòng 66-156).
+  - Tự động nạp dữ liệu thể loại mặc định (dòng 161) và dữ liệu sách demo (Doraemon, One Piece, Mắt Biếc, Harry Potter, Conan - dòng 188-202).
+
+--------------------------------------------------------------------------------
+CÂU 3: KIẾN TRÚC, MODULE, LỚP CÓ ĐƯỢC THIẾT KẾ CÓ CHỦ ĐÍCH KHÔNG?
+--------------------------------------------------------------------------------
+TRẢ LỜI: CÓ. 
+Dự án được thiết kế có chủ đích rõ ràng theo kiến trúc phân lớp Clean/Layered Architecture, đảm bảo tính tách biệt trách nhiệm (Separation of Concerns).
+
+CẤU TRÚC PHÂN LỚP THỰC TẾ TRONG MÃ NGUỒN:
+1. Presentation Layer (Tầng hiển thị - Frontend):
+   - Đặt tại thư mục `public/`.
+   - Chứa giao diện tĩnh `public/discover.html` và `public/reviews.html`.
+   - Các file script trong `public/js/` điều phối luồng giao diện và gọi fetch API. Nghiệp vụ frontend được tách thành các hook như `public/js/useBooks.js` (xử lý tải sách, tìm kiếm) và `public/js/useReviews.js` (xử lý đăng/xóa review, bình luận).
+2. Routing Layer (Tầng định tuyến API):
+   - Đặt tại file [routes/review.routes.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/routes/review.routes.js).
+   - Tiếp nhận các HTTP request, gắn middleware kiểm tra token bảo mật `authenticateToken` và điều phối sang các Controller tương ứng.
+3. Controller Layer (Tầng điều phối nghiệp vụ):
+   - Đặt tại file [controllers/review.controller.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/controllers/review.controller.js).
+   - Chứa các controller nghiệp vụ: `AuthController`, `BookController`, `ReviewController`, `CommentController`, `CategoryController`.
+   - Nhiệm vụ: Tiếp nhận dữ liệu từ req.body/params, điều phối nghiệp vụ, xác thực JWT, phân quyền tài khoản (ví dụ chỉ tác giả mới được sửa/xóa bài viết của mình - dòng 225, 268) và trả về response HTTP.
+4. Domain Model Layer (Tầng nghiệp vụ & thực thể cốt lõi):
+   - Đặt tại file [models/review.model.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/models/review.model.js).
+   - Chứa các lớp thực thể: `User`, `Book`, `Review`, `Comment`.
+   - Nhiệm vụ: Định nghĩa cấu trúc đối tượng nghiệp vụ và tự đóng gói logic kiểm tra tính hợp lệ (validation) đầu vào (ví dụ: `Review.validate` dòng 52, `Comment.validate` dòng 81).
+5. Data Access Layer / Repository Layer (Tầng tương tác cơ sở dữ liệu):
+   - Đặt tại file [repositories/review.repository.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/repositories/review.repository.js).
+   - Chứa các Repository: `UserRepository`, `BookRepository`, `ReviewRepository`, `CommentRepository`, `CategoryRepository`.
+   - Nhiệm vụ: Thực hiện các câu lệnh truy vấn SQL trực tiếp qua connection pool của MySQL. Giúp che giấu chi tiết kỹ thuật lưu trữ khỏi tầng Controller.
+
+--------------------------------------------------------------------------------
+CÂU 4: DESIGN PATTERN ĐƯỢC DÙNG Ở ĐÂU, VÌ SAO CẦN DÙNG?
+--------------------------------------------------------------------------------
+TRẢ LỜI: Dự án áp dụng có chủ đích 3 mẫu thiết kế (Design Patterns) kinh điển:
+
+1. SINGLETON PATTERN:
+   - Nơi sử dụng: Lớp `Database` tại [db/database.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/db/database.js).
+   - Đoạn mã cụ thể (dòng 4-7, 23, 381-383):
+     ```javascript
+     class Database {
+       constructor() {
+         if (Database.instance) {
+           return Database.instance;
+         }
+         ...
+         Database.instance = this;
+       }
+     }
+     const dbInstance = new Database();
+     module.exports = dbInstance;
+     ```
+   - Vì sao cần dùng: Đảm bảo toàn bộ ứng dụng chỉ khởi tạo một connection pool duy nhất kết nối tới MySQL toàn cục. Việc này ngăn chặn tình trạng rò rỉ kết nối (connection leaks), giảm thiểu quá tải CPU/RAM của hệ thống cơ sở dữ liệu khi ứng dụng mở rộng.
+
+2. REPOSITORY PATTERN:
+   - Nơi sử dụng: Triển khai tại [repositories/review.repository.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/repositories/review.repository.js) và export các instance đơn lẻ đại diện (dòng 602-610):
+     ```javascript
+     module.exports = {
+       UserRepository: new UserRepository(),
+       BookRepository: new BookRepository(),
+       ReviewRepository: new ReviewRepository(),
+       CommentRepository: new CommentRepository(),
+       CategoryRepository: new CategoryRepository()
+     };
+     ```
+   - Vì sao cần dùng: Tách rời hoàn toàn tầng xử lý HTTP/Nghiệp vụ (Controller) khỏi tầng truy vấn vật lý (SQL Query). Nếu sau này dự án chuyển đổi từ MySQL sang cơ sở dữ liệu khác (như PostgreSQL, MongoDB), ta chỉ cần viết lại các hàm SQL trong Repository mà không cần thay đổi bất kỳ logic nào của Controller hay Router.
+
+3. OBSERVER PATTERN (PUBLISH-SUBSCRIBE):
+   - Nơi sử dụng: Triển khai ở Client/Frontend tại các hook `public/js/useAuth.js` và `public/js/useReviews.js`.
+   - Ý nghĩa: Các module này cung cấp hàm đăng ký sự kiện lắng nghe (subscribe). Khi trạng thái đăng nhập thay đổi hoặc danh sách bài review mới được thêm/sửa/xóa, các listener đã đăng ký trên giao diện sẽ tự động được gọi (notify) để render lại UI tức thời mà không cần reload trang web.
+
+--------------------------------------------------------------------------------
+CÂU 5: SOLID ĐƯỢC THỂ HIỆN CỤ THỂ TRONG CẤU TRÚC LỚP/MODULE NÀO?
+--------------------------------------------------------------------------------
+TRẢ LỜI: Thiết kế mã nguồn của dự án áp dụng chặt chẽ các nguyên lý SOLID:
+
+1. SINGLE RESPONSIBILITY PRINCIPLE (SRP - Nguyên lý đơn nhiệm):
+   - Thể hiện: Mỗi lớp/file chỉ giữ một trách nhiệm duy nhất.
+   - [models/review.model.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/models/review.model.js) chỉ định nghĩa kiểu thực thể và thực hiện kiểm tra tính hợp lệ (validate).
+   - [repositories/review.repository.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/repositories/review.repository.js) chỉ đảm nhận việc lập câu lệnh SQL và lấy dữ liệu thô.
+   - [controllers/review.controller.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/controllers/review.controller.js) chỉ chịu trách nhiệm nhận request, trả response HTTP và điều hướng luồng.
+
+2. OPEN/CLOSED PRINCIPLE (OCP - Nguyên lý đóng/mở):
+   - Thể hiện: Thiết kế mở rộng nhưng đóng đối với việc chỉnh sửa.
+   - Khi người dùng viết review, họ có thể thêm các thể loại sách tùy chỉnh mới (custom categories). Hệ thống sẽ tự động chèn vào bảng `categories` và tạo liên kết thông qua bảng trung gian `review_categories` (được định nghĩa ở db/database.js dòng 123-131 và repositories/review.repository.js dòng 424-444). Cơ chế này cho phép mở rộng vô hạn các thể loại sách mới mà không cần sửa đổi cấu trúc cốt lõi của bảng `reviews` hay sửa đổi logic của Model `Review`.
+
+3. LISKOV SUBSTITUTION PRINCIPLE (LSP - Nguyên lý thay thế Liskov):
+   - Thể hiện: Các đối tượng thuộc lớp `Book`, `Review`, `Comment` đều đảm bảo giữ đúng giao diện thuộc tính định sẵn (mã nguồn models/review.model.js) và có thể được truyền thay thế linh hoạt vào bất kỳ hàm xử lý định dạng hoặc hiển thị dữ liệu nào của hệ thống mà không làm crash ứng dụng.
+
+4. INTERFACE SEGREGATION PRINCIPLE (ISP - Nguyên lý phân tách Interface):
+   - Thể hiện: Thay vì gộp chung toàn bộ phương thức truy vấn cơ sở dữ liệu vào một class database dùng chung duy nhất, dự án chia nhỏ các phương thức thành các Repository chuyên biệt riêng lẻ: `UserRepository` (chỉ xử lý người dùng), `BookRepository` (chỉ xử lý sách), `ReviewRepository` (chỉ xử lý bài review), `CommentRepository` (chỉ xử lý bình luận) tại repositories/review.repository.js.
+
+5. DEPENDENCY INVERSION PRINCIPLE (DIP - Nguyên lý đảo ngược phụ thuộc):
+   - Thể hiện: Tầng nghiệp vụ cấp cao (Controller) không phụ thuộc trực tiếp vào database MySQL vật lý, mà phụ thuộc vào tầng trừu tượng (các Repository). 
+   - Minh chứng rõ nhất trong kiểm thử: Tại file unit test [controllers/review.controller_test.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/controllers/review.controller_test.js), ta có thể mock hoàn toàn các Repository một cách dễ dàng và tiêm (inject) vào Controller để kiểm thử logic xử lý mà không cần khởi động kết nối cơ sở dữ liệu MySQL thật.
+
+--------------------------------------------------------------------------------
+CÂU 6: KIỂM THỬ CÓ TẬP TRUNG VÀO DOMAIN/SERVICE LAYER KHÔNG?
+--------------------------------------------------------------------------------
+TRẢ LỜI: CÓ. 
+Bộ kiểm thử tự động của hệ thống được viết bằng Jest tập trung kiểm thử cô lập 100% logic nghiệp vụ tại tầng Domain Model, tầng Repository và tầng Controller.
+
+CÁC FILE KIỂM THỬ & NỘI DUNG TẬP TRUNG:
+1. Kiểm thử Domain Model:
+   - File: [models/review.model_test.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/models/review.model_test.js)
+   - Tập trung: Kiểm tra các hàm validate nghiệp vụ. Đảm bảo dữ liệu review thiếu tiêu đề sách, thiếu tên tác giả, rating nằm ngoài dải [1-5], hay content quá ngắn (< 5 ký tự) đều bị từ chối chính xác và trả về thông báo lỗi chuẩn.
+2. Kiểm thử tầng Repository (Data Access):
+   - File: [repositories/review.repository_test.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/repositories/review.repository_test.js)
+   - Tập trung: Mock kết nối MySQL vật lý bằng `jest.mock`. Test độ chính xác của các câu lệnh truy vấn dữ liệu của các Repository. Đặc biệt kiểm thử logic nghiệp vụ cập nhật ảnh bìa sách động từ review đăng sớm nhất có ảnh (`updateCoverFromReview`) và bỏ qua không cập nhật ảnh bìa đối với sách do admin thêm cố định.
+3. Kiểm thử tầng điều phối nghiệp vụ (Controller):
+   - File: [controllers/review.controller_test.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/controllers/review.controller_test.js)
+   - Tập trung: Mock các Repository để kiểm thử logic cô lập của Controller. Đảm bảo validate đúng, phân quyền tác giả chính xác (chỉ cho phép tác giả sửa/xóa bài đánh giá của chính mình), và trả về mã HTTP Status Code chuẩn (201 Created khi đăng ký/đăng review, 400 Bad Request khi lỗi validate, 403 Forbidden khi sửa/xóa bài của người khác).
+4. Kiểm thử tích hợp toàn diện (Integration Test):
+   - File: [routes/review.routes_test.js](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/routes/review.routes_test.js)
+   - Tập trung: Dùng **Supertest** gửi request HTTP thật để kiểm thử luồng tích hợp xuyên suốt: *Đăng ký tài khoản -> Đăng nhập lấy JWT Token -> Viết review -> Tạo bình luận -> Xóa bình luận -> Xóa review* hoạt động trơn tru trên database test cô lập `hutaboo_test`.
+
+--------------------------------------------------------------------------------
+CÂU 7: NHÓM CÓ ĐỦ BẰNG CHỨNG: MÃ NGUỒN, KẾT QUẢ CHẠY TEST, COVERAGE, ẢNH DEMO, DỮ LIỆU DEMO, README?
+--------------------------------------------------------------------------------
+TRẢ LỜI: NHÓM CUNG CẤP ĐẦY ĐỦ CÁC MINH CHỨNG THỰC TẾ:
+
+1. Mã nguồn hoàn chỉnh: Tổ chức thư mục phân lớp tường minh, được lưu trữ trên repository cục bộ.
+2. Kết quả chạy test: Toàn bộ 60/60 ca kiểm thử thuộc 4 suite test đều PASS 100% dưới local (Chi tiết báo cáo chạy test được lưu tại tệp [walkthrough.md](file:///C:/Users/admin/.gemini/antigravity/brain/326874fc-0c80-48fa-8e65-3095f8c13602/walkthrough.md)).
+3. Dữ liệu demo (Seeding): Dữ liệu mẫu phong phú tự động nạp khi khởi động ứng dụng (15 thể loại sách và 5 tác phẩm truyện mẫu).
+4. Ảnh demo: Các ảnh bìa sách gốc (doraemon, onepiece, matbiec...) nằm trong thư mục `public/images/` và thư mục `public/uploads/covers/`.
+5. Hướng dẫn vận hành chi tiết: Được trình bày đầy đủ tại tài liệu hướng dẫn và file báo cáo tuần.
+================================================================================

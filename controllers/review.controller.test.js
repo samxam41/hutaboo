@@ -11,7 +11,8 @@ const mockBookRepository = {
   getByTopic: jest.fn(),
   searchBooks: jest.fn(),
   updateRating: jest.fn(),
-  updateCoverFromReview: jest.fn()
+  updateCoverFromReview: jest.fn(),
+  updateTags: jest.fn()
 };
 
 const mockReviewRepository = {

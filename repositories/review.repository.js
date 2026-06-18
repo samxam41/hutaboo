@@ -226,6 +226,45 @@ class BookRepository {
       console.error('[BookRepository] Lỗi cập nhật ảnh bìa từ review sớm nhất:', err.message);
     }
   }
+
+  // Tự động cập nhật trường tags (thể loại) của sách từ các bài reviews
+  async updateTags(bookId) {
+    const pool = db.getPool();
+    try {
+      // Kiểm tra xem sách có reviews nào không
+      const [reviewCountRows] = await pool.query('SELECT COUNT(*) as count FROM reviews WHERE book_id = ?', [bookId]);
+      if (reviewCountRows[0].count === 0) {
+        // Nếu không còn review nào và là sách do user thêm, reset về 'Khác'
+        const [bookRows] = await pool.query('SELECT is_user_added FROM books WHERE id = ?', [bookId]);
+        if (bookRows.length > 0 && bookRows[0].is_user_added) {
+          await pool.query('UPDATE books SET tags = ? WHERE id = ?', ['Khác', bookId]);
+          console.log(`[BookRepository] Reset tags về 'Khác' cho sách ID ${bookId} vì không còn review.`);
+        }
+        return;
+      }
+
+      // Lấy tất cả tên các thể loại từ các review của sách này
+      const query = `
+        SELECT DISTINCT c.name, c.is_default
+        FROM reviews r
+        JOIN review_categories rc ON r.id = rc.review_id
+        JOIN categories c ON rc.category_id = c.id
+        WHERE r.book_id = ?
+        ORDER BY c.is_default DESC, c.name ASC
+      `;
+      const [rows] = await pool.query(query, [bookId]);
+      
+      let tagsStr = 'Khác';
+      if (rows.length > 0) {
+        tagsStr = rows.map(row => row.name).join(', ');
+      }
+      
+      await pool.query('UPDATE books SET tags = ? WHERE id = ?', [tagsStr, bookId]);
+      console.log(`[BookRepository] Đã cập nhật tags thành công cho sách ID ${bookId} thành: ${tagsStr}`);
+    } catch (err) {
+      console.error('[BookRepository] Lỗi cập nhật tags từ review:', err.message);
+    }
+  }
 }
 
 /**

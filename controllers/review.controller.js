@@ -199,6 +199,9 @@ const ReviewController = {
       
       // Tự động tính toán lại điểm trung bình của sách
       await BookRepository.updateRating(bookId);
+
+      // Tự động cập nhật các thể loại (tags) của sách từ các bài reviews
+      await BookRepository.updateTags(bookId);
       
       const newReview = await ReviewRepository.getById(reviewId);
       console.log('[Backend Controller - Create Review] Đã lưu thành công review ID:', reviewId);
@@ -245,6 +248,9 @@ const ReviewController = {
       
       // Tự động tính toán lại điểm trung bình của sách
       await BookRepository.updateRating(review.bookId);
+
+      // Tự động cập nhật các thể loại (tags) của sách từ các bài reviews
+      await BookRepository.updateTags(review.bookId);
       
       const updatedReview = await ReviewRepository.getById(reviewId);
       console.log('[Backend Controller - Update Review] Đã cập nhật thành công review ID:', reviewId);
@@ -276,6 +282,9 @@ const ReviewController = {
 
       // Tự động tính toán lại điểm trung bình của sách
       await BookRepository.updateRating(review.bookId);
+
+      // Tự động cập nhật các thể loại (tags) của sách từ các bài reviews
+      await BookRepository.updateTags(review.bookId);
       
       return res.json({ message: 'Xóa bài review thành công.' });
     } catch (error) {

@@ -1257,7 +1257,7 @@ select.form-control {
 }
 
 .toast {
-  background: #1e293b;
+  background: #c1d9ff;
   border-left: 4px solid var(--primary);
   box-shadow: var(--shadow-lg);
   padding: 0.8rem 1.5rem;
