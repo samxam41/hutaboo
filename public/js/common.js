@@ -391,7 +391,7 @@ function showAboutModal(type) {
     title = 'Thông tin Nhóm thực hiện';
     content = `
       <div style="line-height: 1.6;">
-        <p><strong>Mã nhóm:</strong> Nhóm BTL 15</p>
+        <p><strong>Mã nhóm:</strong> Nhóm 01</p>
         <p style="margin-bottom: 0.5rem; font-weight: 600;">Danh sách thành viên:</p>
         <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; margin-bottom: 0.5rem;">
           <thead>
