@@ -231,19 +231,14 @@ Mở file [public/discover.html](file:///d:/NGUYENHUONG/HOC/PTUD/BTL/public/disc
           </thead>
           <tbody>
             <tr style="border-bottom: 1px solid var(--border-color);">
-              <td style="padding: 0.5rem 0;">Nguyễn Văn A</td>
-              <td>2202xxxx</td>
-              <td>Trưởng nhóm, Backend</td>
+              <td style="padding: 0.5rem 0;">Nguyễn Thu Hường</td>
+              <td>20231594</td>
+              <td>Viết review</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
-              <td style="padding: 0.5rem 0;">Trần Thị B</td>
-              <td>2202xxxx</td>
-              <td>Frontend Developer</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--border-color);">
-              <td style="padding: 0.5rem 0;">Lê Văn C</td>
-              <td>2202xxxx</td>
-              <td>Tester, Unit Test</td>
+              <td style="padding: 0.5rem 0;">Ngô Phương Thanh</td>
+              <td>20231628</td>
+              <td>Tìm kiếm sách</td>
             </tr>
           </tbody>
         </table>

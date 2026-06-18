@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const db = require('./db/database');
 const routes = require('./routes/review.routes');
+const { setupMenu } = require('./menu');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -105,6 +106,9 @@ function createWindow() {
 
   // Tải giao diện ứng dụng từ Server Express nội bộ
   mainWindow.loadURL(`http://localhost:${PORT}`);
+
+  // Thiết lập menu ứng dụng Electron tùy chỉnh
+  setupMenu(mainWindow);
 
   // Tự động mở cửa sổ Console Log (DevTools)
   mainWindow.webContents.openDevTools();

@@ -371,3 +371,139 @@ async function loadComments(reviewId) {
     container.innerHTML = `<p style="color: var(--danger)">Lỗi tải bình luận: ${error.message}</p>`;
   }
 }
+
+// ==========================================
+// DYNAMIC MODALS FOR ELECTRON APPLICATION MENU
+// ==========================================
+function showAboutModal(type) {
+  let modalEl = document.getElementById('about-info-modal');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'about-info-modal';
+    modalEl.className = 'modal-overlay';
+    document.body.appendChild(modalEl);
+  }
+
+  let title = '';
+  let content = '';
+
+  if (type === 'group') {
+    title = 'Thông tin Nhóm thực hiện';
+    content = `
+      <div style="line-height: 1.6;">
+        <p><strong>Mã nhóm:</strong> Nhóm BTL 15</p>
+        <p style="margin-bottom: 0.5rem; font-weight: 600;">Danh sách thành viên:</p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+              <th style="padding: 0.5rem 0;">Họ và tên</th>
+              <th>MSSV</th>
+              <th>Vai trò</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.5rem 0;">Nguyễn Thu Hường</td>
+              <td>20231594</td>
+              <td>Viết review</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.5rem 0;">Ngô Phương Thanh</td>
+              <td>20231628</td>
+              <td>Tìm kiếm sách</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  } else if (type === 'course') {
+    title = 'Thông tin Học phần';
+    content = `
+      <div style="line-height: 1.6;">
+        <p><strong>Môn học:</strong> AC3030 – Phát triển ứng dụng</p>
+        <p><strong>Học kỳ:</strong> 2025.2, Năm học 2025 - 2026</p>
+        <p><strong>Giảng viên phụ trách:</strong> TS. Nguyễn Việt Tùng</p>
+        <p style="margin-top: 0.5rem;"><strong>Nội dung đồ án BTL:</strong> Xây dựng ứng dụng Desktop đăng bài review sách, tìm kiếm sách đọc theo thể loại, tác giả, tên,...</p>
+      </div>
+    `;
+  } else if (type === 'app') {
+    title = 'Giới thiệu Ứng dụng';
+    content = `
+      <div style="line-height: 1.6;">
+        <p><strong>Tên ứng dụng:</strong> HuTaBoo - Mạng xã hội chia sẻ và đánh giá sách</p>
+        <p><strong>Mục đích:</strong> Giúp độc giả lưu trữ tác phẩm, chia sẻ cảm nghĩ qua các bài review, đánh giá chất lượng (sao) và bình luận trao đổi học thuật.</p>
+        <p><strong>Phiên bản:</strong> v2.1.0-release</p>
+        <p style="margin-top: 0.5rem; font-weight: 600;">Công nghệ sử dụng:</p>
+        <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
+          <li>Desktop Container: Electron v41.7.1</li>
+          <li>API Backend: Express v4.19.2 (NodeJS)</li>
+          <li>Cơ sở dữ liệu: MySQL v8.0</li>
+          <li>Công cụ test: Jest & Supertest</li>
+        </ul>
+      </div>
+    `;
+  }
+
+  modalEl.innerHTML = `
+    <div class="modal-content" style="max-width: 500px; text-align: left;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+        <h3 class="modal-title" style="margin: 0; color: var(--text-primary);">${title}</h3>
+        <button class="close-modal-btn" id="close-about-info-modal-x" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">&times;</button>
+      </div>
+      <div class="modal-body">
+        ${content}
+
+      </div>
+    </div>
+  `;
+
+  // Sử dụng hook useModal sẵn có
+  const customModal = window.useModal('about-info-modal');
+  customModal.open();
+
+  document.getElementById('close-about-info-modal-x').onclick = () => customModal.close();
+  document.getElementById('close-about-info-modal-btn').onclick = () => customModal.close();
+}
+
+// Lắng nghe sự kiện IPC từ Electron Main Process
+if (typeof require !== 'undefined') {
+  try {
+    const { ipcRenderer } = require('electron');
+
+    ipcRenderer.on('menu-home', () => {
+      // Điều hướng về Trang chủ (discover.html)
+      if (window.location.pathname.includes('discover.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
+        if (typeof searchKeyword !== 'undefined') searchKeyword = '';
+        const input = document.getElementById('book-search-input');
+        if (input) input.value = '';
+        if (typeof fetchBooksData === 'function') fetchBooksData();
+      } else {
+        window.location.href = 'discover.html';
+      }
+    });
+
+    ipcRenderer.on('menu-refresh', () => {
+      window.location.reload();
+    });
+
+    ipcRenderer.on('menu-settings', () => {
+      if (typeof showToast === 'function') {
+        showToast('Tính năng cài đặt hệ thống sẽ được nâng cấp trong phiên bản tiếp theo.', 'info');
+      }
+    });
+
+    ipcRenderer.on('menu-about-group', () => {
+      showAboutModal('group');
+    });
+
+    ipcRenderer.on('menu-about-course', () => {
+      showAboutModal('course');
+    });
+
+    ipcRenderer.on('menu-about-app', () => {
+      showAboutModal('app');
+    });
+  } catch (err) {
+    console.warn('[IPC Renderer] Không thể tải thư viện Electron:', err.message);
+  }
+}
