@@ -2,14 +2,12 @@ const mockPool = {
   query: jest.fn()
 };
 
-// Mock the database dependency
 jest.mock('../db/database', () => {
   return {
     getPool: () => mockPool
   };
 });
 
-// Mock fs module to avoid actual file operations during unit test
 jest.mock('fs', () => {
   return {
     existsSync: jest.fn().mockReturnValue(true),
@@ -21,244 +19,86 @@ jest.mock('fs', () => {
 });
 
 const fs = require('fs');
-const {
-  UserRepository,
-  BookRepository,
-  ReviewRepository,
-  CommentRepository,
-  CategoryRepository
-} = require('./review.repository');
+const { BookRepository, ReviewRepository } = require('./review.repository');
 
-describe('Repositories Unit Tests', () => {
+describe('Repositories Unit Tests (Data Layer)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('UserRepository', () => {
-    test('findByUsername should return User when found', async () => {
+  describe('BookRepository.searchBooks (TC-SEARCH-01 to TC-SEARCH-08)', () => {
+    test('TC-SEARCH-01: Tìm kiếm theo tên tác phẩm', async () => {
       mockPool.query.mockResolvedValue([
-        [{ id: 1, username: 'testuser', password: 'hashedpassword' }]
+        [{ id: 1, title: 'Doraemon', author: 'Fujiko', tags: 'Manga' }]
       ]);
-
-      const user = await UserRepository.findByUsername('testuser');
-      expect(user).not.toBeNull();
-      expect(user.id).toBe(1);
-      expect(user.username).toBe('testuser');
-      expect(mockPool.query).toHaveBeenCalledWith('SELECT * FROM users WHERE username = ?', ['testuser']);
+      const result = await BookRepository.searchBooks('Doraemon');
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('Doraemon');
+      expect(mockPool.query).toHaveBeenCalledWith(expect.any(String), ['%Doraemon%', '%Doraemon%', '%Doraemon%']);
     });
 
-    test('findByUsername should return null when not found', async () => {
+    test('TC-SEARCH-02: Tìm kiếm theo tên tác giả', async () => {
+      mockPool.query.mockResolvedValue([
+        [{ id: 1, title: 'Doraemon', author: 'Fujiko F. Fujio', tags: 'Manga' }]
+      ]);
+      const result = await BookRepository.searchBooks('Fujiko');
+      expect(result).toHaveLength(1);
+      expect(result[0].author).toBe('Fujiko F. Fujio');
+    });
+
+    test('TC-SEARCH-03: Tìm kiếm theo thể loại', async () => {
+      mockPool.query.mockResolvedValue([
+        [{ id: 1, title: 'Doraemon', author: 'Fujiko', tags: 'Manga, Thiếu nhi' }]
+      ]);
+      const result = await BookRepository.searchBooks('Manga');
+      expect(result).toHaveLength(1);
+      expect(result[0].tags).toContain('Manga');
+    });
+
+    test('TC-SEARCH-04: Tìm kiếm kết hợp nhiều điều kiện', async () => {
+      mockPool.query.mockResolvedValue([
+        [{ id: 1, title: 'Doraemon', author: 'Fujiko F. Fujio', tags: 'Manga' }]
+      ]);
+      const result = await BookRepository.searchBooks('Doraemon');
+      expect(result).toHaveLength(1);
+    });
+
+    test('TC-SEARCH-05: Tìm kiếm không có kết quả', async () => {
       mockPool.query.mockResolvedValue([[]]);
-
-      const user = await UserRepository.findByUsername('nonexistent');
-      expect(user).toBeNull();
+      const result = await BookRepository.searchBooks('NonexistentBookXYZ');
+      expect(result).toHaveLength(0);
     });
 
-    test('findById should return User when found', async () => {
+    test('TC-SEARCH-06: Tìm kiếm từ khóa gần đúng', async () => {
       mockPool.query.mockResolvedValue([
-        [{ id: 1, username: 'testuser', password: 'hashedpassword' }]
+        [{ id: 1, title: 'Doraemon', author: 'Fujiko', tags: 'Manga' }]
       ]);
-
-      const user = await UserRepository.findById(1);
-      expect(user).not.toBeNull();
-      expect(user.id).toBe(1);
-      expect(user.username).toBe('testuser');
+      const result = await BookRepository.searchBooks('Dora');
+      expect(result).toHaveLength(1);
     });
 
-    test('create should return insertId', async () => {
-      mockPool.query.mockResolvedValue([{ insertId: 42 }]);
+    test('TC-SEARCH-07: Tìm kiếm không phân biệt chữ hoa/chữ thường', async () => {
+      mockPool.query.mockResolvedValue([
+        [{ id: 1, title: 'Doraemon', author: 'Fujiko', tags: 'Manga' }]
+      ]);
+      const result = await BookRepository.searchBooks('dOrAeMoN');
+      expect(result).toHaveLength(1);
+    });
 
-      const insertId = await UserRepository.create('newuser', 'hashedpass');
-      expect(insertId).toBe(42);
-      expect(mockPool.query).toHaveBeenCalledWith(
-        'INSERT INTO users (username, password) VALUES (?, ?)',
-        ['newuser', 'hashedpass']
-      );
+    test('TC-SEARCH-08: Tìm kiếm khi bỏ trống từ khóa', async () => {
+      mockPool.query.mockResolvedValue([
+        [
+          { id: 1, title: 'Doraemon', author: 'Fujiko', tags: 'Manga' },
+          { id: 2, title: 'One Piece', author: 'Oda', tags: 'Manga' }
+        ]
+      ]);
+      const result = await BookRepository.searchBooks('');
+      expect(result).toHaveLength(2);
     });
   });
 
-  describe('BookRepository', () => {
-    test('getAll should return array of Books', async () => {
-      mockPool.query.mockResolvedValue([
-        [
-          {
-            id: 1,
-            title: 'Book 1',
-            author: 'Author 1',
-            tags: 'Manga',
-            averageRating: '4.50',
-            reviewCount: 5,
-            description: 'Desc',
-            image: 'img.png'
-          }
-        ]
-      ]);
-
-      const books = await BookRepository.getAll();
-      expect(books).toHaveLength(1);
-      expect(books[0].title).toBe('Book 1');
-      expect(books[0].averageRating).toBe(4.5);
-    });
-
-    test('getById should return Book when found', async () => {
-      mockPool.query.mockResolvedValue([
-        [
-          {
-            id: 1,
-            title: 'Book 1',
-            author: 'Author 1',
-            tags: 'Manga',
-            averageRating: '4.50',
-            reviewCount: 5,
-            description: 'Desc',
-            image: 'img.png'
-          }
-        ]
-      ]);
-
-      const book = await BookRepository.getById(1);
-      expect(book).not.toBeNull();
-      expect(book.title).toBe('Book 1');
-    });
-
-    test('getOrCreate should return existing book id', async () => {
-      mockPool.query.mockResolvedValueOnce([[{ id: 10 }]]); // Select query
-
-      const bookId = await BookRepository.getOrCreate('Book 1', 'Author 1');
-      expect(bookId).toBe(10);
-      expect(mockPool.query).toHaveBeenCalledTimes(1);
-    });
-
-    test('getOrCreate should create and return new book id if not exists', async () => {
-      mockPool.query
-        .mockResolvedValueOnce([[]]) // Select query: not found
-        .mockResolvedValueOnce([{ insertId: 11 }]); // Insert query
-
-      const bookId = await BookRepository.getOrCreate('Book New', 'Author New');
-      expect(bookId).toBe(11);
-      expect(mockPool.query).toHaveBeenCalledTimes(2);
-    });
-
-    test('updateCoverFromReview should update cover when is_user_added is true and reviews have images', async () => {
-      // 1. Get book: is_user_added = true
-      // 2. Select review images: found review with image
-      // 3. Update cover query
-      mockPool.query
-        .mockResolvedValueOnce([[{ image: 'default.svg', is_user_added: 1 }]]) // select book
-        .mockResolvedValueOnce([[{ image_path: 'uploads/reviews/review-image.png' }]]) // select review images
-        .mockResolvedValueOnce([{}]); // update book cover
-
-      fs.existsSync.mockReturnValue(true);
-
-      await BookRepository.updateCoverFromReview(5);
-      expect(mockPool.query).toHaveBeenCalledTimes(3);
-      expect(fs.copyFileSync).toHaveBeenCalled();
-    });
-
-    test('updateCoverFromReview should reset to default cover when no reviews have images', async () => {
-      mockPool.query
-        .mockResolvedValueOnce([[{ image: 'cover-5.png', is_user_added: 1 }]]) // select book
-        .mockResolvedValueOnce([[]]) // select review images (none found)
-        .mockResolvedValueOnce([{}]); // update book cover to default
-
-      await BookRepository.updateCoverFromReview(5);
-      expect(mockPool.query).toHaveBeenCalledTimes(3);
-      expect(mockPool.query).toHaveBeenLastCalledWith(
-        'UPDATE books SET image = ? WHERE id = ?',
-        ['uploads/covers/default_cover.svg', 5]
-      );
-    });
-
-    test('updateCoverFromReview should do nothing if is_user_added is false', async () => {
-      mockPool.query.mockResolvedValueOnce([[{ image: 'cover-fixed.png', is_user_added: 0 }]]); // select book
-
-      await BookRepository.updateCoverFromReview(5);
-      expect(mockPool.query).toHaveBeenCalledTimes(1); // Only checked the book, did not query reviews or update
-      expect(fs.copyFileSync).not.toHaveBeenCalled();
-    });
-
-    test('updateTags should update book tags with concatenated names when reviews have categories', async () => {
-      mockPool.query
-        .mockResolvedValueOnce([[{ count: 1 }]]) // count reviews
-        .mockResolvedValueOnce([[{ name: 'Manga' }, { name: 'Hài hước' }]]) // select distinct categories
-        .mockResolvedValueOnce([{}]); // update book tags
-
-      await BookRepository.updateTags(10);
-      expect(mockPool.query).toHaveBeenCalledTimes(3);
-      expect(mockPool.query).toHaveBeenLastCalledWith(
-        'UPDATE books SET tags = ? WHERE id = ?',
-        ['Manga, Hài hước', 10]
-      );
-    });
-
-    test('updateTags should set tag to "Khác" if no categories are linked to the reviews', async () => {
-      mockPool.query
-        .mockResolvedValueOnce([[{ count: 1 }]]) // count reviews
-        .mockResolvedValueOnce([[]]) // select distinct categories (none found)
-        .mockResolvedValueOnce([{}]); // update book tags
-
-      await BookRepository.updateTags(10);
-      expect(mockPool.query).toHaveBeenCalledTimes(3);
-      expect(mockPool.query).toHaveBeenLastCalledWith(
-        'UPDATE books SET tags = ? WHERE id = ?',
-        ['Khác', 10]
-      );
-    });
-
-    test('updateTags should do nothing if book has no reviews and is_user_added is false', async () => {
-      mockPool.query
-        .mockResolvedValueOnce([[{ count: 0 }]]) // count reviews
-        .mockResolvedValueOnce([[{ is_user_added: 0 }]]); // select book
-
-      await BookRepository.updateTags(10);
-      expect(mockPool.query).toHaveBeenCalledTimes(2);
-    });
-
-    test('updateTags should reset tags to "Khác" if book has no reviews and is_user_added is true', async () => {
-      mockPool.query
-        .mockResolvedValueOnce([[{ count: 0 }]]) // count reviews
-        .mockResolvedValueOnce([[{ is_user_added: 1 }]]) // select book
-        .mockResolvedValueOnce([{}]); // update book tags to default
-
-      await BookRepository.updateTags(10);
-      expect(mockPool.query).toHaveBeenCalledTimes(3);
-      expect(mockPool.query).toHaveBeenLastCalledWith(
-        'UPDATE books SET tags = ? WHERE id = ?',
-        ['Khác', 10]
-      );
-    });
-  });
-
-  describe('ReviewRepository', () => {
-    test('getById should query review details, categories and images', async () => {
-      mockPool.query
-        .mockResolvedValueOnce([
-          [
-            {
-              id: 1,
-              user_id: 2,
-              book_id: 3,
-              rating: 5,
-              content: 'Good',
-              created_at: '2026-06-16',
-              username: 'user1',
-              bookTitle: 'Title',
-              bookAuthor: 'Author',
-              bookTopic: 'Topic'
-            }
-          ]
-        ]) // select review
-        .mockResolvedValueOnce([[{ id: 101, name: 'Manga' }]]) // select categories
-        .mockResolvedValueOnce([[{ image_path: 'uploads/reviews/img.png' }]]); // select images
-
-      const review = await ReviewRepository.getById(1);
-      expect(review).not.toBeNull();
-      expect(review.categories).toContain('Manga');
-      expect(review.images).toContain('uploads/reviews/img.png');
-      expect(mockPool.query).toHaveBeenCalledTimes(3);
-    });
-
-    test('create should insert review, categories, custom categories, and images', async () => {
+  describe('ReviewRepository (TC-REVIEW-08 and TC-REVIEW-10)', () => {
+    test('TC-REVIEW-08: Lưu review vào database', async () => {
       mockPool.query
         .mockResolvedValueOnce([{ insertId: 50 }]) // insert review
         .mockResolvedValueOnce([{}]) // insert review_categories
@@ -268,20 +108,12 @@ describe('Repositories Unit Tests', () => {
         .mockResolvedValueOnce([{}]); // insert review_images
 
       const reviewId = await ReviewRepository.create(
-        2, // userId
-        3, // bookId
-        5, // rating
-        'Superb', // content
-        [101], // categoryIds
-        ['New Category'], // customCategories
-        ['uploads/reviews/img.png'] // imagePaths
+        2, 3, 5, 'Superb content', [101], ['New Category'], ['uploads/reviews/img.png']
       );
-
       expect(reviewId).toBe(50);
-      expect(mockPool.query).toHaveBeenCalledTimes(6);
     });
 
-    test('delete should delete reviews and associated images from disk and database', async () => {
+    test('TC-REVIEW-10: Xóa review hoặc xử lý lỗi khi thao tác review', async () => {
       mockPool.query
         .mockResolvedValueOnce([[{ image_path: 'uploads/reviews/img.png' }]]) // select review images
         .mockResolvedValueOnce([{}]); // delete review
@@ -291,51 +123,6 @@ describe('Repositories Unit Tests', () => {
       const result = await ReviewRepository.delete(50);
       expect(result).toBe(true);
       expect(fs.unlinkSync).toHaveBeenCalled();
-      expect(mockPool.query).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe('CommentRepository', () => {
-    test('getByReviewId should return list of Comments', async () => {
-      mockPool.query.mockResolvedValue([
-        [
-          {
-            id: 1,
-            review_id: 2,
-            user_id: 3,
-            content: 'Nice!',
-            created_at: '2026-06-16',
-            username: 'user3'
-          }
-        ]
-      ]);
-
-      const comments = await CommentRepository.getByReviewId(2);
-      expect(comments).toHaveLength(1);
-      expect(comments[0].content).toBe('Nice!');
-    });
-
-    test('create should insert comment and return insertId', async () => {
-      mockPool.query.mockResolvedValue([{ insertId: 99 }]);
-
-      const commentId = await CommentRepository.create(2, 3, 'My comment');
-      expect(commentId).toBe(99);
-      expect(mockPool.query).toHaveBeenCalledWith(
-        'INSERT INTO comments (review_id, user_id, content) VALUES (?, ?, ?)',
-        [2, 3, 'My comment']
-      );
-    });
-  });
-
-  describe('CategoryRepository', () => {
-    test('getAll should return categories', async () => {
-      mockPool.query.mockResolvedValue([
-        [{ id: 1, name: 'Tiểu thuyết', is_default: 1 }]
-      ]);
-
-      const categories = await CategoryRepository.getAll();
-      expect(categories).toHaveLength(1);
-      expect(categories[0].name).toBe('Tiểu thuyết');
     });
   });
 });

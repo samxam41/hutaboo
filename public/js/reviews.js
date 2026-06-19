@@ -550,48 +550,7 @@ function setupDragAndDrop() {
   }
 }
 
-// ==========================================
-// QUẢN LÝ BÌNH LUẬN (COMMENTS)
-// ==========================================
-async function handleCommentSubmit(e) {
-  e.preventDefault();
-  
-  if (!window.authHook.isAuthenticated()) {
-    showToast('Vui lòng đăng nhập trước khi bình luận.', 'error');
-    authModal.open();
-    return;
-  }
 
-  const input = document.getElementById('comment-content');
-  const content = input ? input.value.trim() : '';
-  if (!content || !currentDetailReviewId) return;
-
-  try {
-    await window.reviewsHook.addComment(currentDetailReviewId, content);
-    showToast('Đã gửi bình luận.');
-    if (input) input.value = '';
-    await loadComments(currentDetailReviewId);
-  } catch (error) {
-    showToast('Lỗi gửi bình luận: ' + error.message, 'error');
-  }
-}
-
-async function handleDeleteComment(commentId) {
-  if (confirm('Bạn có chắc chắn muốn xóa bình luận này không?')) {
-    try {
-      await window.reviewsHook.deleteComment(commentId);
-      showToast('Đã xóa bình luận.');
-      await loadComments(currentDetailReviewId);
-    } catch (error) {
-      showToast('Lỗi xóa bình luận: ' + error.message, 'error');
-    }
-  }
-}
-
-const commentForm = document.getElementById('comment-form');
-if (commentForm) {
-  commentForm.addEventListener('submit', handleCommentSubmit);
-}
 
 const reviewCloseBtn = document.getElementById('close-review-modal-x');
 if (reviewCloseBtn) {

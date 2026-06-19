@@ -301,7 +301,15 @@ const ReviewController = {
 
       const fs = require('fs');
       const path = require('path');
-      const dir = path.join(__dirname, '../public/uploads/reviews');
+      
+      let dir;
+      if (process.versions.electron) {
+        const { app: electronApp } = require('electron');
+        const appInstance = electronApp || require('@electron/remote').app;
+        dir = path.join(appInstance.getPath('userData'), 'uploads/reviews');
+      } else {
+        dir = path.join(__dirname, '../public/uploads/reviews');
+      }
       
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });

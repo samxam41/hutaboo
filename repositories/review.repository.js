@@ -195,12 +195,28 @@ class BookRepository {
 
         if (rows.length > 0) {
           const earliestImagePath = rows[0].image_path;
-          const sourceFullPath = path.join(__dirname, '../public', earliestImagePath);
+          
+          let sourceFullPath;
+          if (process.versions.electron) {
+            const { app: electronApp } = require('electron');
+            const appInstance = electronApp || require('@electron/remote').app;
+            sourceFullPath = path.join(appInstance.getPath('userData'), earliestImagePath);
+          } else {
+            sourceFullPath = path.join(__dirname, '../public', earliestImagePath);
+          }
           
           if (fs.existsSync(sourceFullPath)) {
             const ext = path.extname(earliestImagePath);
             const coverRelativePath = `uploads/covers/cover-${bookId}${ext}`;
-            const destFullPath = path.join(__dirname, '../public', coverRelativePath);
+            
+            let destFullPath;
+            if (process.versions.electron) {
+              const { app: electronApp } = require('electron');
+              const appInstance = electronApp || require('@electron/remote').app;
+              destFullPath = path.join(appInstance.getPath('userData'), coverRelativePath);
+            } else {
+              destFullPath = path.join(__dirname, '../public', coverRelativePath);
+            }
             
             const coversDir = path.dirname(destFullPath);
             if (!fs.existsSync(coversDir)) {
@@ -543,7 +559,15 @@ class ReviewRepository {
     const pathsToAdd = imagePaths.filter(p => !oldPaths.includes(p));
 
     for (const imgPath of pathsToDelete) {
-      const fullPath = path.join(__dirname, '../public', imgPath);
+      let fullPath;
+      if (process.versions.electron) {
+        const { app: electronApp } = require('electron');
+        const appInstance = electronApp || require('@electron/remote').app;
+        fullPath = path.join(appInstance.getPath('userData'), imgPath);
+      } else {
+        fullPath = path.join(__dirname, '../public', imgPath);
+      }
+      
       if (fs.existsSync(fullPath)) {
         try {
           fs.unlinkSync(fullPath);
@@ -572,7 +596,15 @@ class ReviewRepository {
 
     const [imgRows] = await pool.query('SELECT image_path FROM review_images WHERE review_id = ?', [id]);
     for (const r of imgRows) {
-      const fullPath = path.join(__dirname, '../public', r.image_path);
+      let fullPath;
+      if (process.versions.electron) {
+        const { app: electronApp } = require('electron');
+        const appInstance = electronApp || require('@electron/remote').app;
+        fullPath = path.join(appInstance.getPath('userData'), r.image_path);
+      } else {
+        fullPath = path.join(__dirname, '../public', r.image_path);
+      }
+      
       if (fs.existsSync(fullPath)) {
         try {
           fs.unlinkSync(fullPath);

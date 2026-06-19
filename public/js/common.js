@@ -507,3 +507,59 @@ if (typeof require !== 'undefined') {
     console.warn('[IPC Renderer] Không thể tải thư viện Electron:', err.message);
   }
 }
+
+// ==========================================
+// QUẢN LÝ BÌNH LUẬN (COMMENTS)
+// ==========================================
+async function handleCommentSubmit(e) {
+  e.preventDefault();
+  
+  if (!window.authHook.isAuthenticated()) {
+    showToast('Vui lòng đăng nhập trước khi bình luận.', 'error');
+    authModal.open();
+    return;
+  }
+
+  const input = document.getElementById('comment-content');
+  const content = input ? input.value.trim() : '';
+  if (!content || !currentDetailReviewId) return;
+
+  try {
+    await window.reviewsHook.addComment(currentDetailReviewId, content);
+    showToast('Đã gửi bình luận.');
+    if (input) input.value = '';
+    await loadComments(currentDetailReviewId);
+  } catch (error) {
+    showToast('Lỗi gửi bình luận: ' + error.message, 'error');
+  }
+}
+
+async function handleDeleteComment(commentId) {
+  if (confirm('Bạn có chắc chắn muốn xóa bình luận này không?')) {
+    try {
+      await window.reviewsHook.deleteComment(commentId);
+      showToast('Đã xóa bình luận.');
+      await loadComments(currentDetailReviewId);
+    } catch (error) {
+      showToast('Lỗi xóa bình luận: ' + error.message, 'error');
+    }
+  }
+}
+
+// Gắn các hàm xử lý bình luận vào phạm vi global để sự kiện inline onclick tìm thấy
+window.handleDeleteComment = handleDeleteComment;
+window.handleCommentSubmit = handleCommentSubmit;
+
+// Đăng ký sự kiện submit cho form bình luận khi DOM sẵn sàng
+function bindCommentForm() {
+  const commentForm = document.getElementById('comment-form');
+  if (commentForm) {
+    commentForm.addEventListener('submit', handleCommentSubmit);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindCommentForm);
+} else {
+  bindCommentForm();
+}

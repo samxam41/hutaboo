@@ -149,7 +149,7 @@
   <div class="modal-overlay" id="detail-modal">
     <div class="modal-content large">
       <div class="modal-header">
-        <h3 class="modal-title">Chi tiết bài Review</h3>
+        <h3 class="modal-title">Chi tiết bài Đánh giá</h3>
         <button class="close-modal-btn" id="close-detail-modal-x">&times;</button>
       </div>
       <div class="modal-body">
@@ -168,6 +168,17 @@
           <div class="comment-list" id="comments-list-container">
             <!-- Chèn động comments -->
           </div>
+          
+          <!-- Form viết bình luận -->
+          <form id="comment-form">
+            <div class="comment-form">
+              <input type="text" id="comment-content" class="form-control comment-input" placeholder="Viết bình luận của bạn..." required>
+              <button type="submit" class="btn btn-primary">
+                Gửi <i class="fa-regular fa-paper-plane"></i>
+              </button>
+            </div>
+          </form>
+          
         </div>
       </div>
     </div>

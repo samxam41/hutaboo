@@ -1,45 +1,210 @@
 const mysql = require('mysql2/promise');
+const path = require('path');
+const fs = require('fs');
+
+// Detect packaged Electron environment and determine userData path
+let isPackaged = false;
+let electronDbPath = null;
+
+if (process.versions.electron) {
+  try {
+    const { app } = require('electron');
+    const electronApp = app || require('@electron/remote').app;
+    if (electronApp) {
+      isPackaged = electronApp.isPackaged;
+      electronDbPath = path.join(electronApp.getPath('userData'), 'hutaboo.db');
+    }
+  } catch (e) {
+    console.warn('[Database] Lỗi khi nạp thông tin Electron:', e.message);
+  }
+}
+
+/**
+ * SQLitePoolWrapper: Giả lập API của mysql2/promise để tương thích với hệ thống Repository hiện tại.
+ */
+class SQLitePoolWrapper {
+  constructor(dbPath) {
+    console.log(`[SQLitePoolWrapper] Đang mở/tạo file database tại: ${dbPath}`);
+    this.sqlite3 = require('sqlite3').verbose();
+    
+    // Đảm bảo thư mục cha tồn tại
+    const parentDir = path.dirname(dbPath);
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true });
+    }
+    
+    this.db = new this.sqlite3.Database(dbPath);
+    // Bật khóa ngoại cho SQLite
+    this.db.run('PRAGMA foreign_keys = ON;');
+  }
+
+  async query(sql, params = []) {
+    let convertedSql = sql;
+    let convertedParams = [...params];
+
+    // 1. Loại bỏ hoặc xử lý các lệnh cụ thể của MySQL khi tạo/xóa Database
+    if (/CREATE\s+DATABASE/i.test(convertedSql)) {
+      return [[]];
+    }
+    if (/DROP\s+DATABASE/i.test(convertedSql)) {
+      const tables = await new Promise((resolve) => {
+        this.db.all("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'", (err, rows) => {
+          if (err || !rows) return resolve([]);
+          resolve(rows.map(r => r.name));
+        });
+      });
+      for (const table of tables) {
+        await new Promise((resolve) => {
+          this.db.run(`DROP TABLE IF EXISTS \`${table}\``, () => resolve());
+        });
+      }
+      return [[]];
+    }
+
+    // 2. Chuyển đổi cú pháp tạo bảng MySQL -> SQLite
+    convertedSql = convertedSql.replace(/ENGINE\s*=\s*\w+/gi, '');
+    convertedSql = convertedSql.replace(/DEFAULT\s+CHARSET\s*=\s*\w+/gi, '');
+    convertedSql = convertedSql.replace(/CHARACTER\s+SET\s+\w+/gi, '');
+    convertedSql = convertedSql.replace(/COLLATE\s+\w+/gi, '');
+    convertedSql = convertedSql.replace(/INT\s+AUTO_INCREMENT\s+PRIMARY\s+KEY/gi, 'INTEGER PRIMARY KEY AUTOINCREMENT');
+    convertedSql = convertedSql.replace(/INT\s+AUTO_INCREMENT/gi, 'INTEGER PRIMARY KEY AUTOINCREMENT');
+
+    // 3. Chuyển đổi INSERT IGNORE -> INSERT OR IGNORE
+    convertedSql = convertedSql.replace(/INSERT\s+IGNORE\s+INTO/gi, 'INSERT OR IGNORE INTO');
+
+    // 4. Giả lập lệnh SHOW COLUMNS
+    if (/SHOW\s+COLUMNS\s+FROM\s+books\s+LIKE/i.test(convertedSql)) {
+      const hasColumn = await new Promise((resolve) => {
+        this.db.all("PRAGMA table_info(books)", (err, rows) => {
+          if (err || !rows) return resolve(false);
+          const exists = rows.some(r => r.name === 'is_user_added');
+          resolve(exists);
+        });
+      });
+      if (hasColumn) {
+        return [[{ Field: 'is_user_added' }]];
+      } else {
+        return [[]];
+      }
+    }
+
+    // 5. Chuyển đổi cú pháp bulk insert của mysql2 (mảng lồng nhau với VALUES ?) sang SQLite
+    let handledBulk = false;
+    if (convertedSql.includes('VALUES ?') && convertedParams.length === 1 && Array.isArray(convertedParams[0])) {
+      const rowsToInsert = convertedParams[0];
+      if (Array.isArray(rowsToInsert) && rowsToInsert.length > 0 && Array.isArray(rowsToInsert[0])) {
+        const placeholderGroup = '(' + rowsToInsert[0].map(() => '?').join(', ') + ')';
+        const allPlaceholders = rowsToInsert.map(() => placeholderGroup).join(', ');
+        
+        convertedSql = convertedSql.replace('VALUES ?', 'VALUES ' + allPlaceholders);
+        convertedParams = rowsToInsert.flat();
+        handledBulk = true;
+      }
+    }
+
+    // 6. Chuyển đổi cú pháp IN (?) với danh sách array (ví dụ: WHERE id IN (?)) sang SQLite
+    if (!handledBulk) {
+      let paramIdx = 0;
+      let newParams = [];
+      let sqlParts = convertedSql.split('?');
+      let newSql = '';
+      
+      for (let i = 0; i < sqlParts.length - 1; i++) {
+        newSql += sqlParts[i];
+        const currentParam = convertedParams[paramIdx];
+        
+        if (Array.isArray(currentParam)) {
+          if (currentParam.length === 0) {
+            newSql += 'NULL';
+          } else {
+            newSql += currentParam.map(() => '?').join(', ');
+            newParams.push(...currentParam);
+          }
+        } else {
+          newSql += '?';
+          newParams.push(currentParam);
+        }
+        paramIdx++;
+      }
+      newSql += sqlParts[sqlParts.length - 1];
+      
+      convertedSql = newSql;
+      convertedParams = newParams;
+    }
+
+    // 7. Thực thi truy vấn chuẩn
+    return new Promise((resolve, reject) => {
+      const isSelect = /^\s*SELECT|PRAGMA/i.test(convertedSql);
+      if (isSelect) {
+        this.db.all(convertedSql, convertedParams, (err, rows) => {
+          if (err) return reject(err);
+          resolve([rows]);
+        });
+      } else {
+        this.db.run(convertedSql, convertedParams, function(err) {
+          if (err) return reject(err);
+          resolve([{ insertId: this.lastID, affectedRows: this.changes }]);
+        });
+      }
+    });
+  }
+
+  async end() {
+    return new Promise((resolve, reject) => {
+      this.db.close((err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+  }
+}
 
 class Database {
   constructor() {
     if (Database.instance) {
       return Database.instance;
     }
-
-    const host = 'localhost';
-    const user =  'root';
-    const password =  '040105';
-
-    // Khởi tạo connection pool ban đầu không có database để có thể tạo database nếu chưa tồn tại
-    this.pool = mysql.createPool({
-      host,
-      user,
-      password,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0
-    });
-
+    this.pool = null;
+    this.isSqlite = false;
     Database.instance = this;
   }
 
   /**
-   * Khởi tạo database, tạo các bảng và chèn dữ liệu mẫu
+   * Khởi tạo database, tạo các bảng và chèn dữ liệu mẫu (Tự động fallback sang SQLite nếu MySQL không khả dụng)
    */
   async initialize() {
-    try {
-      const dbName = process.env.DB_NAME || 'hutaboo';
-      
-      // 1. Tạo database nếu chưa tồn tại
-      await this.pool.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-      
-      // 2. Đóng pool cũ và kết nối lại tới database cụ thể
-      await this.pool.end();
+    const dbName = process.env.DB_NAME || 'hutaboo';
+    const forceSqlite = process.env.USE_SQLITE === 'true' || isPackaged;
 
+    if (forceSqlite) {
+      console.log('[Database] Đang sử dụng chế độ SQLite (Zero Configuration)...');
+      const finalDbPath = electronDbPath || path.join(process.cwd(), `${dbName}.db`);
+      this.pool = new SQLitePoolWrapper(finalDbPath);
+      this.isSqlite = true;
+      await this.createTables();
+      return;
+    }
+
+    try {
+      console.log('[Database] Đang kết nối tới database MySQL...');
       const host = 'localhost';
       const user = 'root';
       const password = '040105';
 
+      this.pool = mysql.createPool({
+        host,
+        user,
+        password,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+      });
+
+      // Tạo database nếu chưa tồn tại
+      await this.pool.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+      
+      // Kết nối trực tiếp vào database cụ thể
+      await this.pool.end();
       this.pool = mysql.createPool({
         host,
         user,
@@ -50,13 +215,17 @@ class Database {
         queueLimit: 0
       });
 
-      console.log(`[Database] Đã kết nối thành công tới database: ${dbName}`);
-
-      // 3. Khởi tạo các bảng dữ liệu
+      console.log(`[Database] Kết nối MySQL thành công tới DB: ${dbName}`);
+      this.isSqlite = false;
       await this.createTables();
-    } catch (error) {
-      console.error('[Database] Lỗi khởi tạo cơ sở dữ liệu:', error.message);
-      throw error;
+    } catch (mysqlError) {
+      console.warn(`[Database] Kết nối MySQL thất bại: ${mysqlError.message}`);
+      console.warn(`[Database] Đang tự động chuyển sang chế độ dự phòng SQLite (Fallback)...`);
+
+      const finalDbPath = electronDbPath || path.join(process.cwd(), `${dbName}.db`);
+      this.pool = new SQLitePoolWrapper(finalDbPath);
+      this.isSqlite = true;
+      await this.createTables();
     }
   }
 
@@ -246,14 +415,32 @@ class Database {
     try {
       const fs = require('fs');
       const path = require('path');
-      const coversDir = path.join(__dirname, '../public/uploads/covers');
       
+      let coversDir;
+      let packagedCoversDir = path.join(__dirname, '../public/uploads/covers');
+      
+      if (process.versions.electron) {
+        const { app: electronApp } = require('electron');
+        const appInstance = electronApp || require('@electron/remote').app;
+        coversDir = path.join(appInstance.getPath('userData'), 'uploads/covers');
+      } else {
+        coversDir = packagedCoversDir;
+      }
+      
+      // Khởi tạo thư mục covers trong userData nếu chưa có
       if (!fs.existsSync(coversDir)) {
-        console.warn(`[Database Migration] Warning: Thư mục ${coversDir} không tồn tại.`);
-        return;
+        fs.mkdirSync(coversDir, { recursive: true });
       }
 
-      const physicalFiles = fs.readdirSync(coversDir);
+      // Danh sách file ảnh bìa thực tế từ cả 2 thư mục
+      let physicalFiles = [];
+      if (fs.existsSync(coversDir)) {
+        physicalFiles = physicalFiles.concat(fs.readdirSync(coversDir));
+      }
+      if (fs.existsSync(packagedCoversDir) && packagedCoversDir !== coversDir) {
+        physicalFiles = physicalFiles.concat(fs.readdirSync(packagedCoversDir));
+      }
+
       const [books] = await this.pool.query('SELECT id, title, image FROM books');
       let updateCount = 0;
 
@@ -279,12 +466,28 @@ class Database {
           if (reviewRows.length > 0) {
             // Quy tắc mới cho sách chưa có ảnh bìa riêng: Sử dụng ảnh của bài review đăng sớm nhất
             const earliestImagePath = reviewRows[0].image_path;
-            const sourceFullPath = path.join(__dirname, '../public', earliestImagePath);
+            
+            let sourceFullPath;
+            if (process.versions.electron) {
+              const { app: electronApp } = require('electron');
+              const appInstance = electronApp || require('@electron/remote').app;
+              sourceFullPath = path.join(appInstance.getPath('userData'), earliestImagePath);
+            } else {
+              sourceFullPath = path.join(__dirname, '../public', earliestImagePath);
+            }
             
             if (fs.existsSync(sourceFullPath)) {
               const ext = path.extname(earliestImagePath);
               const coverRelativePath = `uploads/covers/cover-${book.id}${ext}`;
-              const destFullPath = path.join(__dirname, '../public', coverRelativePath);
+              
+              let destFullPath;
+              if (process.versions.electron) {
+                const { app: electronApp } = require('electron');
+                const appInstance = electronApp || require('@electron/remote').app;
+                destFullPath = path.join(appInstance.getPath('userData'), coverRelativePath);
+              } else {
+                destFullPath = path.join(__dirname, '../public', coverRelativePath);
+              }
               
               try {
                 fs.copyFileSync(sourceFullPath, destFullPath);
@@ -319,8 +522,15 @@ class Database {
           }
 
           // Kiểm tra xem file ảnh có thực sự tồn tại trên đĩa không
-          const physicalPath = path.join(__dirname, '../public', newPath);
-          const fileExists = fs.existsSync(physicalPath);
+          let fileExists = false;
+          if (process.versions.electron) {
+            const { app: electronApp } = require('electron');
+            const appInstance = electronApp || require('@electron/remote').app;
+            fileExists = fs.existsSync(path.join(appInstance.getPath('userData'), newPath));
+          }
+          if (!fileExists) {
+            fileExists = fs.existsSync(path.join(__dirname, '../public', newPath));
+          }
 
           // Nếu file không tồn tại, hoặc đường dẫn là dạng cũ ./images/... hoặc images/...
           if (!fileExists || newPath.startsWith('images/')) {

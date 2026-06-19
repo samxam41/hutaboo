@@ -81,22 +81,20 @@ function setupMenu(mainWindow) {
     }
   ];
 
-  // Bổ sung menu phát triển (Developer Tools) khi chạy ở chế độ dev
-  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-    template.push({
-      label: 'Phát triển',
-      submenu: [
-        {
-          label: 'Tải lại giao diện',
-          role: 'reload'
-        },
-        {
-          label: 'Bật/Tắt DevTools',
-          role: 'toggleDevTools'
-        }
-      ]
-    });
-  }
+  // Bổ sung menu phát triển (Developer Tools)
+  template.push({
+    label: 'Phát triển',
+    submenu: [
+      {
+        label: 'Tải lại giao diện',
+        role: 'reload'
+      },
+      {
+        label: 'Bật/Tắt DevTools',
+        role: 'toggleDevTools'
+      }
+    ]
+  });
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);

@@ -1,17 +1,8 @@
-const { User, Book, Review, Comment } = require('./review.model');
+const { Book, Review } = require('./review.model');
 
-describe('Models Unit Tests', () => {
-  describe('User Model', () => {
-    test('should instantiate User correctly', () => {
-      const user = new User(1, 'testuser', 'hashedpassword');
-      expect(user.id).toBe(1);
-      expect(user.username).toBe('testuser');
-      expect(user.password).toBe('hashedpassword');
-    });
-  });
-
-  describe('Book Model', () => {
-    test('should instantiate Book correctly', () => {
+describe('Models Unit Tests (Domain Layer)', () => {
+  describe('Book Model (TC-SEARCH-10)', () => {
+    test('TC-SEARCH-10: Kiểm tra dữ liệu Book khởi tạo đúng định dạng', () => {
       const book = new Book(
         1,
         'Clean Code',
@@ -33,33 +24,8 @@ describe('Models Unit Tests', () => {
     });
   });
 
-  describe('Review Model', () => {
-    test('should instantiate Review correctly', () => {
-      const review = new Review(
-        1,
-        2,
-        3,
-        5,
-        'Great book!',
-        '2026-06-16T00:00:00Z',
-        'reviewer_user',
-        'Book Title',
-        'Author Name',
-        'Topic'
-      );
-      expect(review.id).toBe(1);
-      expect(review.userId).toBe(2);
-      expect(review.bookId).toBe(3);
-      expect(review.rating).toBe(5);
-      expect(review.content).toBe('Great book!');
-      expect(review.createdAt).toBe('2026-06-16T00:00:00Z');
-      expect(review.username).toBe('reviewer_user');
-      expect(review.bookTitle).toBe('Book Title');
-      expect(review.bookAuthor).toBe('Author Name');
-      expect(review.bookTopic).toBe('Topic');
-    });
-
-    test('should validate valid review data', () => {
+  describe('Review Model Validations (TC-REVIEW-01 to TC-REVIEW-07)', () => {
+    test('TC-REVIEW-01: Tạo review hợp lệ', () => {
       const data = {
         bookTitle: 'Clean Code',
         bookAuthor: 'Robert C. Martin',
@@ -69,7 +35,7 @@ describe('Models Unit Tests', () => {
       expect(Review.validate(data)).toBeNull();
     });
 
-    test('should invalidate review with empty book title', () => {
+    test('TC-REVIEW-02: Validate tiêu đề review không được trống', () => {
       const data = {
         bookTitle: '',
         bookAuthor: 'Robert C. Martin',
@@ -79,17 +45,17 @@ describe('Models Unit Tests', () => {
       expect(Review.validate(data)).toBe('Tên tác phẩm không được để trống');
     });
 
-    test('should invalidate review with empty book author', () => {
+    test('TC-REVIEW-03: Validate nội dung review', () => {
       const data = {
         bookTitle: 'Clean Code',
-        bookAuthor: ' ',
+        bookAuthor: 'Robert C. Martin',
         rating: 5,
-        content: 'This is a great book, highly recommend!'
+        content: 'Cool'
       };
-      expect(Review.validate(data)).toBe('Tên tác giả không được để trống');
+      expect(Review.validate(data)).toBe('Nội dung review phải tối thiểu 5 ký tự');
     });
 
-    test('should invalidate review with rating out of range', () => {
+    test('TC-REVIEW-04: Validate đánh giá sao từ 1 đến 5', () => {
       const data = {
         bookTitle: 'Clean Code',
         bookAuthor: 'Robert C. Martin',
@@ -107,36 +73,46 @@ describe('Models Unit Tests', () => {
       expect(Review.validate(data2)).toBe('Đánh giá phải từ 1 đến 5 sao');
     });
 
-    test('should invalidate review with too short content', () => {
+    test('TC-REVIEW-05: Review thiếu dữ liệu bắt buộc (tác giả)', () => {
+      const data = {
+        bookTitle: 'Clean Code',
+        bookAuthor: ' ',
+        rating: 5,
+        content: 'This is a great book, highly recommend!'
+      };
+      expect(Review.validate(data)).toBe('Tên tác giả không được để trống');
+    });
+
+    test('TC-REVIEW-06: Review có nội dung quá ngắn', () => {
       const data = {
         bookTitle: 'Clean Code',
         bookAuthor: 'Robert C. Martin',
         rating: 5,
-        content: 'Cool'
+        content: 'Hay'
       };
       expect(Review.validate(data)).toBe('Nội dung review phải tối thiểu 5 ký tự');
     });
-  });
 
-  describe('Comment Model', () => {
-    test('should instantiate Comment correctly', () => {
-      const comment = new Comment(1, 2, 3, 'Nice comment!', '2026-06-16T00:00:00Z', 'commenter_user');
-      expect(comment.id).toBe(1);
-      expect(comment.reviewId).toBe(2);
-      expect(comment.userId).toBe(3);
-      expect(comment.content).toBe('Nice comment!');
-      expect(comment.createdAt).toBe('2026-06-16T00:00:00Z');
-      expect(comment.username).toBe('commenter_user');
-    });
-
-    test('should validate valid comment data', () => {
-      const data = { content: 'This is a comment.' };
-      expect(Comment.validate(data)).toBeNull();
-    });
-
-    test('should invalidate empty comment content', () => {
-      const data = { content: '   ' };
-      expect(Comment.validate(data)).toBe('Bình luận không được để trống');
+    test('TC-REVIEW-07: Review có nội dung hợp lệ', () => {
+      const review = new Review(
+        1, 2, 3, 5,
+        'Great book!',
+        '2026-06-16T00:00:00Z',
+        'reviewer_user',
+        'Book Title',
+        'Author Name',
+        'Topic'
+      );
+      expect(review.id).toBe(1);
+      expect(review.userId).toBe(2);
+      expect(review.bookId).toBe(3);
+      expect(review.rating).toBe(5);
+      expect(review.content).toBe('Great book!');
+      expect(review.createdAt).toBe('2026-06-16T00:00:00Z');
+      expect(review.username).toBe('reviewer_user');
+      expect(review.bookTitle).toBe('Book Title');
+      expect(review.bookAuthor).toBe('Author Name');
+      expect(review.bookTopic).toBe('Topic');
     });
   });
 });

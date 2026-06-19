@@ -31,7 +31,15 @@ ipcMain.handle('select-images-dialog', async () => {
 ipcMain.handle('upload-images-via-path', async (event, filePaths) => {
   const fs = require('fs');
   const path = require('path');
-  const dir = path.join(__dirname, 'public/uploads/reviews');
+  
+  let dir;
+  if (process.versions.electron) {
+    const { app: electronApp } = require('electron');
+    const appInstance = electronApp || require('@electron/remote').app;
+    dir = path.join(appInstance.getPath('userData'), 'uploads/reviews');
+  } else {
+    dir = path.join(__dirname, 'public/uploads/reviews');
+  }
   
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -55,6 +63,21 @@ ipcMain.handle('upload-images-via-path', async (event, filePaths) => {
 
   return savedPaths;
 });
+
+// Cấu hình static folder phục vụ ảnh upload động từ userData của Electron (nếu chạy Electron)
+if (process.versions.electron) {
+  try {
+    const { app: electronApp } = require('electron');
+    const appInstance = electronApp || require('@electron/remote').app;
+    if (appInstance) {
+      const userDataUploads = path.join(appInstance.getPath('userData'), 'uploads');
+      app.use('/uploads', express.static(userDataUploads));
+      console.log(`[Server] Phục vụ static /uploads từ: ${userDataUploads}`);
+    }
+  } catch (e) {
+    console.warn('[Server] Không thể cấu hình static /uploads từ userData:', e.message);
+  }
+}
 
 // Phục vụ các file tĩnh (HTML, CSS, JS) trong thư mục public
 app.use(express.static(path.join(__dirname, 'public')));
@@ -110,8 +133,8 @@ function createWindow() {
   // Thiết lập menu ứng dụng Electron tùy chỉnh
   setupMenu(mainWindow);
 
-  // Tự động mở cửa sổ Console Log (DevTools)
-  mainWindow.webContents.openDevTools();
+  // Không tự động mở cửa sổ Console Log (DevTools) khi khởi động (người dùng bật khi cần)
+  // mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', function () {
     mainWindow = null;

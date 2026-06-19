@@ -46,3 +46,4 @@ temp/
 config/db.config.js
 hutaboo-desktop.zip
 *.zip
+*.db

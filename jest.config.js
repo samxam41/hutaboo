@@ -9,6 +9,12 @@ module.exports = {
     '**/*_test.js'
   ],
 
+  // Bỏ qua các file e2e test của Playwright trong Jest
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/e2e/'
+  ],
+
   // Tự động dọn dẹp mock trước mỗi ca test
   clearMocks: true,
 
